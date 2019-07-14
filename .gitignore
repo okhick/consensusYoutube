@@ -1,3 +1,4 @@
 *.sqbpro
 .DS_Store
 node_modules/
+creds.json

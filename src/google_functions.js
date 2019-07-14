@@ -25,7 +25,7 @@ class CommentQuery {
     try{
       this.rawComments = await this._getRawComments();
       this.comments = this._drillDownToComments(this.rawComments);
-      return new Promise( (resolve, reject) => {
+      return new Promise( (resolve) => {
         resolve(this.comments);
       });
     }

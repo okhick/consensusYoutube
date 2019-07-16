@@ -36,6 +36,23 @@ class DBQuery {
   }
 
   /**
+   * getCommentsForVideo - filters for all comments by video_id
+   *
+   * @param  {int} video_id
+   * @return {type}          an array of all comments returned
+   */
+  getCommentsForVideo(video_id) {
+    let select = "SELECT comment_id, google_id, user_id, content, like_count FROM comments WHERE video_id = $video_id";
+
+    return new Promise( (resolve, reject) => {
+      db.all(select, { $video_id:video_id }, (err, row) => {
+        if (err) { reject(err) }
+        if (row) { resolve(row) }
+      });
+    });
+  }
+
+  /**
    * _checkExists - Quick helper function to check a table for a value.
    *
    * @param  {string}          table  the table you want to check
@@ -59,19 +76,19 @@ class DBQuery {
   }
 }
 
-db.on("open", async () => {
-  const query = new DBQuery();
-  let nextRow = await query.newVideo('fD-SWaIT8uk');
-  quickSelect();
-});
-
-function quickSelect() {
-  let select = "SELECT * from videos";
-  db.each(select, {}, (err, row) => {
-    if (err) { console.log(err) };
-    if (row) { console.log(row) };
-  });
-}
+// db.on("open", async () => {
+//   const query = new DBQuery();
+//   let nextRow = await query.newVideo('fD-SWaIT8uk');
+//   quickSelect();
+// });
+//
+// function quickSelect() {
+//   let select = "SELECT * from videos";
+//   db.each(select, {}, (err, row) => {
+//     if (err) { console.log(err) };
+//     if (row) { console.log(row) };
+//   });
+// }
 //
 // function quickUpdate() {
 //   let update = "UPDATE videos SET google_id = $google_id WHERE google_id = $badGoogleID";
@@ -92,3 +109,7 @@ function quickSelect() {
 //     if (err) { console.log(err) };
 //   });
 // }
+
+module.exports = {
+  DBQuery: DBQuery
+}

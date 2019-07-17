@@ -8,6 +8,10 @@ class DBQuery {
     //nothing for now
   }
 
+  // =========================================================
+  // ======================== Setters ========================
+  // =========================================================
+
   /**
    * async newVideo - Adds a new video to the database
    *
@@ -35,6 +39,10 @@ class DBQuery {
     }
   }
 
+  // =========================================================
+  // ======================== Getters ========================
+  // =========================================================
+
   /**
    * getCommentsForVideo - filters for all comments by video_id
    *
@@ -51,6 +59,27 @@ class DBQuery {
       });
     });
   }
+
+
+  /**
+   * async getAllUsers - simple query to return all users
+   *
+   * @return {array}  array of all users returned by query
+   */
+  async getAllUsers() {
+    let select = "SELECT user_id, google_id FROM users";
+
+    return new Promise( (resolve, reject) => {
+      db.all(select, { }, (err, row) => {
+        if (err) { reject(err) }
+        if (row) { resolve(row) }
+      });
+    });
+  }
+
+  // =========================================================
+  // ==================== Helper Functions ===================
+  // =========================================================
 
   /**
    * _checkExists - Quick helper function to check a table for a value.

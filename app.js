@@ -17,40 +17,62 @@ async function getThoseComments() {
   )();
 
   let db = new dbQuery.DBQuery;
+
   let video_id = 12; //for now...
   let allComments = await db.getCommentsForVideo(video_id);
+  let newComments = sniffNew(allComments, results, 'comment');
+  console.log(`New Comments: ${newComments} \n`);
 
-  let newComments = sniffNewComments(allComments, results)
-  console.log(newComments);
+  let allUsers = await db.getAllUsers();
+  let newUsers = sniffNew(allUsers, results, 'user');
+  console.log(`New Users: ${newUsers}`);
 
 }
 
 /**
- * sniffNewComments - loop through stuff and find new comments
+ * sniffNew - loop through stuff and find new stuff
  *
- * @param  {array} allComments all comments known to exist
- * @param  {array} results     the comments returned by google
- * @return {array}             all comments that have been added
+ * @param  {array}  allComments all comments known to exist
+ * @param  {array}  results     the comments returned by google
+ * @param  {string} type
+ * @return {object}             object containg an array of known ids and new ids
  */
-function sniffNewComments(allComments, results) {
-  let newComments = [];
+function sniffNew(allKnown, results, type) {
+  let newItems = [];
+  let knownItems = [];
 
-  results.forEach( (potentialComment) => {
-    let commentExists = false;
+  results.forEach( (potentialNewItem) => {
+    let knownItem = false;
+    let potentialNewItemId;
 
-    //loop through the established comments; use a classic for so we can break if we find a match
-    for(i=0; i<allComments.length; i++) {
-      if (allComments[i].google_id === potentialComment.id) {
-        commentExists = true;
+    //determine the google_id based on type
+    switch(type) {
+      case 'comment':
+        potentialNewItemId = potentialNewItem.id;
+        break;
+
+      case 'user':
+        potentialNewItemId = potentialNewItem.snippet.authorChannelId.value;
+        break;
+    }
+
+    //loop through the established items; use a classic for so we can break if we find a match
+    for(i=0; i<allKnown.length; i++) {
+      if (allKnown[i].google_id === potentialNewItemId) {
+        knownItem = true;
         break;
       }
     }
 
-    //if comment does not exist, add it to the array to be returned
-    if (!commentExists) {
-      newComments.push(potentialComment.id);
+    if (knownItem) {
+      knownItems.push(potentialNewItemId)
+    } else {
+      newItems.push(potentialNewItemId);
     }
   });
 
-  return newComments
+  return {
+    newItems: newItems,
+    knownItems: knownItems
+  }
 }

@@ -39,6 +39,25 @@ class DBQuery {
     }
   }
 
+  /**
+   * async newUser - quick function to write new user
+   *
+   * @param  {string} user google_id of user
+   * @return {int}         id of new record
+   */
+  async newUser(user) {
+    let insert = "INSERT INTO users (google_id, date_added) VALUES ($google_id, date('now'))";
+    return new Promise( (resolve, reject) => {
+      db.run(insert, { $google_id: user }, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.lastID);
+        }
+      });
+    });
+  }
+
   // =========================================================
   // ======================== Getters ========================
   // =========================================================
@@ -59,7 +78,6 @@ class DBQuery {
       });
     });
   }
-
 
   /**
    * async getAllUsers - simple query to return all users

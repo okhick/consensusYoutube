@@ -16,17 +16,46 @@ async function getThoseComments() {
     }
   )();
 
-  let db = new dbQuery.DBQuery;
+  const db = new dbQuery.DBQuery;
 
+  //check for new users
+  let allUsers = await db.getAllUsers();
+  let newUsers = sniffNew(allUsers, results, 'user');
+
+  //write new users to db if they exist. return the new ids.
+  let newUserIds;
+  if (newUsers.newItems.length > 0) {
+    newUserIds = await writeNewUsers(newUsers.newItems).then( (newIds) => {
+      return newIds;
+    });
+    console.log(newUserIds);
+  }
+
+  //check for new comments
   let video_id = 12; //for now...
   let allComments = await db.getCommentsForVideo(video_id);
   let newComments = sniffNew(allComments, results, 'comment');
   console.log(`New Comments: ${newComments} \n`);
+  //TODO: record the new comments
 
-  let allUsers = await db.getAllUsers();
-  let newUsers = sniffNew(allUsers, results, 'user');
-  console.log(`New Users: ${newUsers}`);
+  //TODO: check for new likes
+}
 
+
+/**
+ * writeNewUsers - writes new users to db. returns an array of new ids
+ *
+ * @param  {string} newUsers the google_id to write
+ * @return {array}           an array of new ids
+ */
+function writeNewUsers(newUsers) {
+  const db = new dbQuery.DBQuery;
+  let newUserIds = newUsers.map( async (user) => {
+    let userId = await db.newUser(user);
+    return userId;
+  });
+
+  return Promise.all(newUserIds);
 }
 
 /**

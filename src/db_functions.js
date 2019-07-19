@@ -47,6 +47,7 @@ class DBQuery {
    */
   async newUser(user) {
     let insert = "INSERT INTO users (google_id, date_added) VALUES ($google_id, date('now'))";
+
     return new Promise( (resolve, reject) => {
       db.run(insert, { $google_id: user }, function(err) {
         if (err) {
@@ -54,6 +55,33 @@ class DBQuery {
         } else {
           resolve(this.lastID);
         }
+      });
+    });
+  }
+  
+  /**
+   * async newComment - write a new comment
+   *
+   * @param  {Onject} comment  the google result
+   * @param  {Int}    video_id the video_id
+   * @param  {Int}    users    the user_id
+   * @return {Array}           description
+   */
+  async newComment(comment, video_id, users){
+    let insert = "INSERT INTO comments (google_id, video_id, user_id, content, like_count, date_added VALUES ($google_id, $video_id, $user_id, $content, $like_count, $date_added)";
+
+    return new Promise( (resolve, reject) => {
+      db.all(select, {
+          $google_id: comment.id,
+          $video_id: video_id,
+          $user_id: users.user_id,
+          $content: comment.snippet.textDisplay,
+          $like_count: comment.snippet.likeCount,
+          $date_added: date('now')
+        },
+        (err, row) => {
+          if (err) { reject(err) }
+          if (row) { resolve(row) }
       });
     });
   }
@@ -89,6 +117,22 @@ class DBQuery {
 
     return new Promise( (resolve, reject) => {
       db.all(select, { }, (err, row) => {
+        if (err) { reject(err) }
+        if (row) { resolve(row) }
+      });
+    });
+  }
+
+
+  /**
+   * async getUsersByUserId - takes user_id and returns matching users
+   *
+   * @param  {Array} user_ids an array of user ids
+   * @return {Array}          Array of matching results
+   */
+  async getUsersByUserId(user_ids) {
+    return new Promise( (resolve, reject) => {
+      db.all(`SELECT user_id, google_id FROM users WHERE user_id in (${user_ids.map( _ => '?')})`, user_ids, (err, row) => {
         if (err) { reject(err) }
         if (row) { resolve(row) }
       });

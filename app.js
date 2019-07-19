@@ -25,22 +25,26 @@ async function getThoseComments() {
   //write new users to db if they exist. return the new ids.
   let newUserIds;
   if (newUsers.newItems.length > 0) {
-    newUserIds = await writeNewUsers(newUsers.newItems).then( (newIds) => {
+    newUserIds = await writeNew(newUsers.newItems, 'user').then( (newIds) => {
       return newIds;
     });
-    console.log(newUserIds);
   }
+
+  //Use this function to get google ids be user ids
+  let test = await db.getUsersByUserId(_________);
 
   //check for new comments
   let video_id = 12; //for now...
   let allComments = await db.getCommentsForVideo(video_id);
-  let newComments = sniffNew(allComments, results, 'comment');
-  console.log(`New Comments: ${newComments} \n`);
+  let newAndKnownComments = sniffNew(allComments, results, 'comment');
+
+
   //TODO: record the new comments
 
   //TODO: check for new likes
 }
 
+// function getNeeded
 
 /**
  * writeNewUsers - writes new users to db. returns an array of new ids
@@ -48,11 +52,19 @@ async function getThoseComments() {
  * @param  {string} newUsers the google_id to write
  * @return {array}           an array of new ids
  */
-function writeNewUsers(newUsers) {
+function writeNew(newUsers, type) {
   const db = new dbQuery.DBQuery;
   let newUserIds = newUsers.map( async (user) => {
-    let userId = await db.newUser(user);
-    return userId;
+    switch(type) {
+      case "user":
+        let userId = await db.newUser(user);
+        return userId;
+      break;
+
+      case "comment":
+        //somethign
+      break
+    }
   });
 
   return Promise.all(newUserIds);
@@ -78,11 +90,11 @@ function sniffNew(allKnown, results, type) {
     switch(type) {
       case 'comment':
         potentialNewItemId = potentialNewItem.id;
-        break;
+      break;
 
       case 'user':
         potentialNewItemId = potentialNewItem.snippet.authorChannelId.value;
-        break;
+      break;
     }
 
     //loop through the established items; use a classic for so we can break if we find a match

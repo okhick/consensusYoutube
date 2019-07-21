@@ -17,31 +17,48 @@ async function getThoseComments() {
   )();
 
   const db = new dbQuery.DBQuery;
+  try {
+    //check for new comments
+    const video_id = 12; //for now...
+    const allComments = await db.getCommentsForVideo(video_id);
+    const newComments = sniffNew(allComments, results, 'comment');
 
-  //check for new users
-  let allUsers = await db.getAllUsers();
-  let newUsers = sniffNew(allUsers, results, 'user');
+    //check for new users
+    const allUsers = await db.getAllUsers();
+    const newUsersObjects = sniffNew(allUsers, newComments, 'user');
+    const newUsersGoogleIds = newUsersObjects.map( (user) => {
+      return user.snippet.authorChannelId.value;
+    });
 
-  //write new users to db if they exist. return the new ids.
-  let newUserIds;
-  if (newUsers.newItems.length > 0) {
-    newUserIds = await writeNew(newUsers.newItems, 'user').then( (newIds) => {
+    //write any new users to the db. return the ids for kicks and giggles
+    if (newUsersGoogleIds.length > 0) {
+      const newUserIds = await writeNew(newUsersGoogleIds, 'user').then( (newIds) => {
+        return newIds;
+      });
+    }
+
+    //get new comment google_ids into an array so we can search for the user_ids
+    const newCommentUserGoogleIds = results.map( (comment) => {
+      return comment.snippet.authorChannelId.value;
+    });
+
+    //get google ids and user ids
+    const newCommentUserIds = await db.getUsersByGoogleId(newCommentUserGoogleIds);
+
+    //write new comment
+    const writeNewCommentArgs = {
+      video_id: video_id,
+      userIds: newCommentUserIds,
+      comments: newComments
+    }
+    const newCommentIds = await writeNew(writeNewCommentArgs, 'comment').then( (newIds) => {
       return newIds;
     });
+
+  } catch (error) {
+    console.log(error);
   }
 
-  //Use this function to get google ids be user ids
-  let test = await db.getUsersByUserId(_________);
-
-  //check for new comments
-  let video_id = 12; //for now...
-  let allComments = await db.getCommentsForVideo(video_id);
-  let newAndKnownComments = sniffNew(allComments, results, 'comment');
-
-
-  //TODO: record the new comments
-
-  //TODO: check for new likes
 }
 
 // function getNeeded
@@ -49,25 +66,38 @@ async function getThoseComments() {
 /**
  * writeNewUsers - writes new users to db. returns an array of new ids
  *
- * @param  {string} newUsers the google_id to write
+ * @param  {string} newItemToSave the google_id to write
  * @return {array}           an array of new ids
  */
-function writeNew(newUsers, type) {
+function writeNew(newItemToSave, type) {
   const db = new dbQuery.DBQuery;
-  let newUserIds = newUsers.map( async (user) => {
+  let newIds;
     switch(type) {
+
       case "user":
-        let userId = await db.newUser(user);
-        return userId;
+        newIds = newItemToSave.map( async (user) => {
+          let userId = await db.newUser(user);
+          return userId;
+        });
       break;
 
       case "comment":
-        //somethign
+        newIds = newItemToSave.comments.map ( async (comment) => {
+          //match the user_id with the google user id for comment
+          let user_id;
+          newItemToSave.userIds.forEach( (user) => {
+            if(user.google_id == comment.snippet.authorChannelId.value) {
+              user_id = user.user_id;
+            }
+          });
+          //write the comment
+          let commentId = await db.newComment(comment, newItemToSave.video_id, user_id);
+          return commentId;
+        });
       break
     }
-  });
 
-  return Promise.all(newUserIds);
+  return Promise.all(newIds);
 }
 
 /**
@@ -80,7 +110,6 @@ function writeNew(newUsers, type) {
  */
 function sniffNew(allKnown, results, type) {
   let newItems = [];
-  let knownItems = [];
 
   results.forEach( (potentialNewItem) => {
     let knownItem = false;
@@ -105,15 +134,10 @@ function sniffNew(allKnown, results, type) {
       }
     }
 
-    if (knownItem) {
-      knownItems.push(potentialNewItemId)
-    } else {
-      newItems.push(potentialNewItemId);
+    if (!knownItem) {
+      newItems.push(potentialNewItem)
     }
   });
 
-  return {
-    newItems: newItems,
-    knownItems: knownItems
-  }
+  return newItems
 }

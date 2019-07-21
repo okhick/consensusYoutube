@@ -58,31 +58,33 @@ class DBQuery {
       });
     });
   }
-  
+
   /**
    * async newComment - write a new comment
    *
    * @param  {Onject} comment  the google result
    * @param  {Int}    video_id the video_id
    * @param  {Int}    users    the user_id
-   * @return {Array}           description
+   * @return {Array}           the new ids
    */
-  async newComment(comment, video_id, users){
-    let insert = "INSERT INTO comments (google_id, video_id, user_id, content, like_count, date_added VALUES ($google_id, $video_id, $user_id, $content, $like_count, $date_added)";
+  async newComment(comment, video_id, user){
+    let insert = "INSERT INTO comments (google_id, video_id, user_id, content, like_count, date_added) VALUES ($google_id, $video_id, $user_id, $content, $like_count, $date_added)";
 
     return new Promise( (resolve, reject) => {
-      db.all(select, {
+      db.run(insert, {
           $google_id: comment.id,
           $video_id: video_id,
-          $user_id: users.user_id,
+          $user_id: user,
           $content: comment.snippet.textDisplay,
           $like_count: comment.snippet.likeCount,
-          $date_added: date('now')
-        },
-        (err, row) => {
-          if (err) { reject(err) }
-          if (row) { resolve(row) }
-      });
+          $date_added: comment.snippet.publishedAt
+        }, function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(this.lastID);
+          }
+        });
     });
   }
 
@@ -118,21 +120,25 @@ class DBQuery {
     return new Promise( (resolve, reject) => {
       db.all(select, { }, (err, row) => {
         if (err) { reject(err) }
-        if (row) { resolve(row) }
+        if (row) {
+
+          resolve(row) }
       });
     });
   }
 
 
   /**
-   * async getUsersByUserId - takes user_id and returns matching users
+   * async getUsersByUserId - takes user_ids and returns matching users
    *
-   * @param  {Array} user_ids an array of user ids
-   * @return {Array}          Array of matching results
+   * @param  {Array} google_ids an array of user ids
+   * @return {Array}            Array of matching results
    */
-  async getUsersByUserId(user_ids) {
+  async getUsersByGoogleId(google_ids) {
+    let select = "SELECT user_id, google_id FROM users WHERE google_id in";
+
     return new Promise( (resolve, reject) => {
-      db.all(`SELECT user_id, google_id FROM users WHERE user_id in (${user_ids.map( _ => '?')})`, user_ids, (err, row) => {
+      db.all(`${select} (${google_ids.map( _ => '?')})`, google_ids, (err, row) => {
         if (err) { reject(err) }
         if (row) { resolve(row) }
       });

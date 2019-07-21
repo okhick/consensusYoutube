@@ -61,8 +61,6 @@ async function getThoseComments() {
 
 }
 
-// function getNeeded
-
 /**
  * writeNewUsers - writes new users to db. returns an array of new ids
  *
@@ -90,7 +88,7 @@ function writeNew(newItemToSave, type) {
               user_id = user.user_id;
             }
           });
-          //write the comment
+          //write the comment to the db
           let commentId = await db.newComment(comment, newItemToSave.video_id, user_id);
           return commentId;
         });

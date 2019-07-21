@@ -1,4 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
+const dateFormat = require('date-format');
 const db = new sqlite3.Database('./youtubedata.db', (err) => {
   if (err) { console.log(err) }
 });
@@ -20,11 +21,12 @@ class DBQuery {
    */
   async newVideo(google_id) {
     let videoExists = await this._checkExists("videos", "google_id", google_id);
+    let now = dateFormat.asString(dateFormat.ISO8601_FORMAT, new Date());
 
     if (!videoExists) {
-      let insert = "INSERT INTO videos (google_id, date_added) VALUES ($google_id, date('now'))";
+      let insert = `INSERT INTO videos (google_id, date_added) VALUES ($google_id, $now)`;
       return new Promise( (resolve, reject) => {
-        db.run(insert, { $google_id:google_id }, function(err) {
+        db.run(insert, { $google_id:google_id, $now:now }, function(err) {
           if (err) {
             reject(err);
           } else {
@@ -46,10 +48,11 @@ class DBQuery {
    * @return {int}         id of new record
    */
   async newUser(user) {
-    let insert = "INSERT INTO users (google_id, date_added) VALUES ($google_id, date('now'))";
+    let insert = `INSERT INTO users (google_id, date_added) VALUES ($google_id, $now )`;
+    let now = dateFormat.asString(dateFormat.ISO8601_FORMAT, new Date());
 
     return new Promise( (resolve, reject) => {
-      db.run(insert, { $google_id: user }, function(err) {
+      db.run(insert, { $google_id: user, $now: now }, function(err) {
         if (err) {
           reject(err);
         } else {

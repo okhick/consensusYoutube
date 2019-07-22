@@ -16,56 +16,115 @@ async function getThoseComments() {
     }
   )();
 
-  const db = new dbQuery.DBQuery;
   try {
-    //check for new comments
-    const video_id = 12; //for now...
-    const allComments = await db.getCommentsForVideo(video_id);
-    const newComments = sniffNew(allComments, results, 'comment');
+    const videoId = 12; //for now...
+    const newComments = await checkResultsForNewComments(results, videoId);
 
-    //check for new users
-    const allUsers = await db.getAllUsers();
-    const newUsersObjects = sniffNew(allUsers, newComments, 'user');
-    const newUsersGoogleIds = newUsersObjects.map( (user) => {
-      return user.snippet.authorChannelId.value;
-    });
+    //if there are new comments
+    if (newComments.length > 0) {
+      const newUsersGoogleIds = await checkNewCommentsForNewUsers(newComments);
 
-    //write any new users to the db. return the ids for kicks and giggles
-    if (newUsersGoogleIds.length > 0) {
-      const newUserIds = await writeNew(newUsersGoogleIds, 'user').then( (newIds) => {
+      //write any new users to the db. return the ids for kicks and giggles i guess...
+      if (newUsersGoogleIds.length > 0) {
+        const newUserIds = await writeNew(newUsersGoogleIds, 'user').then( (newIds) => {
+          return newIds;
+        });
+      }
+
+      //get new comment google_ids into an array so we can search for the user_ids
+      const newCommentUserGoogleIds = results.map( (comment) => {
+        return comment.snippet.authorChannelId.value;
+      });
+
+      //get google ids and user ids
+      const newCommentUserIds = await getUsersByGoogleId(newCommentUserGoogleIds);
+
+      //write new comment
+      const writeNewCommentArgs = {
+        videoId: videoId,
+        userIds: newCommentUserIds,
+        comments: newComments
+      }
+      const newCommentIds = await writeNew(writeNewCommentArgs, 'comment').then( (newIds) => {
         return newIds;
       });
+
+      //get the new comment content
+      const newlyAddedComments = await getNewAddedComments(newCommentIds);
+      console.log(newlyAddedComments);
+    } else {
+      console.log("THERE ARE NO NEW COMMENTS AT THIS TIME");
     }
-
-    //get new comment google_ids into an array so we can search for the user_ids
-    const newCommentUserGoogleIds = results.map( (comment) => {
-      return comment.snippet.authorChannelId.value;
-    });
-
-    //get google ids and user ids
-    const newCommentUserIds = await db.getUsersByGoogleId(newCommentUserGoogleIds);
-
-    //write new comment
-    const writeNewCommentArgs = {
-      video_id: video_id,
-      userIds: newCommentUserIds,
-      comments: newComments
-    }
-    const newCommentIds = await writeNew(writeNewCommentArgs, 'comment').then( (newIds) => {
-      return newIds;
-    });
-
   } catch (error) {
     console.log(error);
   }
 
 }
 
+// =========================================================
+// ======================== Helpers ========================
+// =========================================================
+
+/**
+ * checkResultsForNewComments
+ *
+ * @param  {object} results the google comments
+ * @param  {int}    videoId
+ * @return {array}          array of new comments || empty if nothing new
+ */
+async function checkResultsForNewComments(results, videoId) {
+  const db = new dbQuery.DBQuery;
+  const allComments = await db.getCommentsForVideo(videoId);
+  return sniffNew(allComments, results, 'comment');
+}
+
+/**
+ * checkNewCommentsForNewUsers
+ *
+ * @param  {array} newComments array of new comments
+ * @return {array}             google ids of new comments || empty if nothing new
+ */
+async function checkNewCommentsForNewUsers(newComments) {
+  const db = new dbQuery.DBQuery;
+  const allUsers = await db.getAllUsers();
+  const newUsers = sniffNew(allUsers, newComments, 'user');
+  const newUsersGoogleIds = newUsers.map( (user) => {
+    return user.snippet.authorChannelId.value;
+  });
+  return newUsersGoogleIds;
+}
+
+/**
+ * getUsersByGoogleId
+ *
+ * @param  {array} newCommentUserGoogleIds array of google ids
+ * @return {array}                         result of user_ids and google_ids
+ */
+async function getUsersByGoogleId(newCommentUserGoogleIds) {
+  const db = new dbQuery.DBQuery;
+  return await db.getUsersByGoogleId(newCommentUserGoogleIds);
+}
+
+/**
+ * getNewAddedComments
+ *
+ * @param  {array} newCommentIds array of comment ids
+ * @return {array}               result of comment_id and content
+ */
+async function getNewAddedComments(newCommentIds) {
+  const db = new dbQuery.DBQuery;
+  return await db.getCommentsById(newCommentIds);
+}
+
+// =========================================================
+// ========================= Logic =========================
+// =========================================================
+
 /**
  * writeNewUsers - writes new users to db. returns an array of new ids
  *
- * @param  {string} newItemToSave the google_id to write
- * @return {array}           an array of new ids
+ * @param  {any} newItemToSave the something you want to save
+ * @return {array}                an array of new ids
  */
 function writeNew(newItemToSave, type) {
   const db = new dbQuery.DBQuery;
@@ -89,7 +148,7 @@ function writeNew(newItemToSave, type) {
             }
           });
           //write the comment to the db
-          let commentId = await db.newComment(comment, newItemToSave.video_id, user_id);
+          let commentId = await db.newComment(comment, newItemToSave.videoId, user_id);
           return commentId;
         });
       break

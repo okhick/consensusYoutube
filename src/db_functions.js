@@ -6,7 +6,7 @@ const db = new sqlite3.Database('./youtubedata.db', (err) => {
 
 class DBQuery {
   constructor() {
-    //nothing for now
+    this.now = dateFormat.asString(dateFormat.ISO8601_FORMAT, new Date());
   }
 
   // =========================================================
@@ -21,12 +21,11 @@ class DBQuery {
    */
   async newVideo(google_id) {
     let videoExists = await this._checkExists("videos", "google_id", google_id);
-    let now = dateFormat.asString(dateFormat.ISO8601_FORMAT, new Date());
 
     if (!videoExists) {
       let insert = `INSERT INTO videos (google_id, date_added) VALUES ($google_id, $now)`;
       return new Promise( (resolve, reject) => {
-        db.run(insert, { $google_id:google_id, $now:now }, function(err) {
+        db.run(insert, { $google_id:google_id, $now:this.now }, function(err) {
           if (err) {
             reject(err);
           } else {
@@ -49,10 +48,9 @@ class DBQuery {
    */
   async newUser(user) {
     let insert = `INSERT INTO users (google_id, date_added) VALUES ($google_id, $now )`;
-    let now = dateFormat.asString(dateFormat.ISO8601_FORMAT, new Date());
 
     return new Promise( (resolve, reject) => {
-      db.run(insert, { $google_id: user, $now: now }, function(err) {
+      db.run(insert, { $google_id:user, $now:this.now }, function(err) {
         if (err) {
           reject(err);
         } else {
@@ -130,6 +128,22 @@ class DBQuery {
     });
   }
 
+  /**
+   * async getCommentsById - akes comment_ids and returns matching users
+   *
+   * @param  {array} comment_ids an array of comment_ids
+   * @return {array}             returns comment id and content
+   */
+  async getCommentsById(comment_ids) {
+    let select = "SELECT comment_id, content FROM comments WHERE comment_id in";
+
+    return new Promise( (resolve, reject) => {
+      db.all(`${select} (${comment_ids.map( _ => '?')})`, comment_ids, (err, row) => {
+        if (err) { reject(err) }
+        if (row) { resolve(row) }
+      });
+    });
+  }
 
   /**
    * async getUsersByUserId - takes user_ids and returns matching users

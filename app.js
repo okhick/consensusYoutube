@@ -16,6 +16,8 @@ async function getThoseComments() {
     }
   )();
 
+  const resultsGoogleIds = results.map( (result) => result.id );
+
   try {
     const videoId = 12; //for now...
     const newComments = await checkResultsForNewComments(results, videoId);
@@ -32,9 +34,7 @@ async function getThoseComments() {
       }
 
       //get new comment google_ids into an array so we can search for the user_ids
-      const newCommentUserGoogleIds = results.map( (comment) => {
-        return comment.snippet.authorChannelId.value;
-      });
+      const newCommentUserGoogleIds = results.map( (comment) => comment.snippet.authorChannelId.value );
 
       //get google ids and user ids
       const newCommentUserIds = await getUsersByGoogleId(newCommentUserGoogleIds);
@@ -52,9 +52,15 @@ async function getThoseComments() {
       //get the new comment content
       const newlyAddedComments = await getNewAddedComments(newCommentIds);
       console.log(newlyAddedComments);
+
     } else {
       console.log("THERE ARE NO NEW COMMENTS AT THIS TIME");
     }
+
+    //always compare like counts
+    const commentsFromGoogleQuery = await getCommentsByGoogleId(resultsGoogleIds);
+    const commentsWithMoreLikes = calculateLikeChanges(commentsFromGoogleQuery, results);
+
   } catch (error) {
     console.log(error);
   }
@@ -106,6 +112,17 @@ async function getUsersByGoogleId(newCommentUserGoogleIds) {
 }
 
 /**
+ * getCommentsByGoogleId
+ *
+ * @param  {array} commentGoogleIds array of google ids
+ * @return {array}                  full result of comments
+ */
+async function getCommentsByGoogleId(commentGoogleIds) {
+  const db = new dbQuery.DBQuery;
+  return await db.getCommentsByGoogleId(commentGoogleIds);
+}
+
+/**
  * getNewAddedComments
  *
  * @param  {array} newCommentIds array of comment ids
@@ -115,6 +132,7 @@ async function getNewAddedComments(newCommentIds) {
   const db = new dbQuery.DBQuery;
   return await db.getCommentsById(newCommentIds);
 }
+
 
 // =========================================================
 // ========================= Logic =========================
@@ -139,7 +157,7 @@ function writeNew(newItemToSave, type) {
       break;
 
       case "comment":
-        newIds = newItemToSave.comments.map ( async (comment) => {
+        newIds = newItemToSave.comments.map( async (comment) => {
           //match the user_id with the google user id for comment
           let user_id;
           newItemToSave.userIds.forEach( (user) => {
@@ -197,4 +215,32 @@ function sniffNew(allKnown, results, type) {
   });
 
   return newItems
+}
+
+/**
+ * calculateLikeChanges - loop through stuff and finds changes in like counts
+ *
+ * @param  {array} comments the sqlite results of all comments
+ * @param  {array} results  the google results
+ * @return {object}           return object of id, current count, and inc amount
+ */
+function calculateLikeChanges(comments, results) {
+  const likeChanges = [];
+
+  comments.forEach( (comment) => {
+    results.forEach( (result) => {
+
+      //if the ids match but the like counts don't match
+      if(result.id == comment.google_id && result.snippet.likeCount != comment.like_count) {
+        let updatedLikes = {
+          id: comment.comment_id,
+          like_count: comment.like_count,
+          like_inc: comment.like_count - result.snippet.likeCount
+        }
+        likeChanges.push(updatedLikes);
+      }
+
+    });
+  });
+  return likeChanges;
 }

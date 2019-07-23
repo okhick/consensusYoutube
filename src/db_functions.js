@@ -5,6 +5,7 @@ const db = new sqlite3.Database('./youtubedata.db', (err) => {
 });
 
 class DBQuery {
+
   constructor() {
     this.now = dateFormat.asString(dateFormat.ISO8601_FORMAT, new Date());
   }
@@ -162,6 +163,16 @@ class DBQuery {
     });
   }
 
+  async getCommentsByGoogleId(google_ids) {
+    let select = "SELECT * FROM comments WHERE google_id in";
+
+    return new Promise( (resolve, reject) => {
+      db.all(`${select} (${google_ids.map( _ => '?')})`, google_ids, (err, row) => {
+        if (err) { reject(err) }
+        if (row) { resolve(row) }
+      });
+    });
+  }
   // =========================================================
   // ==================== Helper Functions ===================
   // =========================================================
@@ -189,40 +200,6 @@ class DBQuery {
     });
   }
 }
-
-// db.on("open", async () => {
-//   const query = new DBQuery();
-//   let nextRow = await query.newVideo('fD-SWaIT8uk');
-//   quickSelect();
-// });
-//
-// function quickSelect() {
-//   let select = "SELECT * from videos";
-//   db.each(select, {}, (err, row) => {
-//     if (err) { console.log(err) };
-//     if (row) { console.log(row) };
-//   });
-// }
-//
-// function quickUpdate() {
-//   let update = "UPDATE videos SET google_id = $google_id WHERE google_id = $badGoogleID";
-//   let args = {
-//     $google_id: 'ZXJWO2FQ16c',
-//     $badGoogleID: 'ZXJWO3FQ16c',
-//   }
-//
-//   db.run(update, args, (err) => {
-//     if (err) { console.log(err) };
-//   });
-// }
-//
-// function quickDelete() {
-//   let drop = "DELETE FROM videos WHERE video_id = 2";
-//
-//   db.run(drop, {}, (err) => {
-//     if (err) { console.log(err) };
-//   });
-// }
 
 module.exports = {
   DBQuery: DBQuery

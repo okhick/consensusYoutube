@@ -1,12 +1,17 @@
+const Max = require('max-api');
 const google = require("./src/google_functions");
 const dbQuery = require("./src/db_functions")
 const fs = require('fs');
 
-getThoseComments()
+
+Max.addHandler("bang", async () => {
+  let data = await getThoseComments()
+  Max.outlet(data);
+})
 
 async function getThoseComments() {
-  //let comments = new google.CommentQuery('fD-SWaIT8uk');
-  //let allComments = await comments.getComments();
+  //let commentQuery = new google.CommentQuery('fD-SWaIT8uk');
+  //let allComments = await commentQuery.getComments();
   //fs.writeFileSync("./testResults.json", JSON.stringify(allComments, null, 2));
   // console.log(allComments[0].snippet.authorChannelId);
 
@@ -16,9 +21,8 @@ async function getThoseComments() {
     }
   )();
 
-  const resultsGoogleIds = results.map( (result) => result.id );
-
   try {
+    const output = {};
     const videoId = 12; //for now...
     const newComments = await checkResultsForNewComments(results, videoId);
 
@@ -51,15 +55,27 @@ async function getThoseComments() {
 
       //get the new comment content
       const newlyAddedComments = await getNewAddedComments(newCommentIds);
-      console.log(newlyAddedComments);
+      output.new_comments = newlyAddedComments;
 
     } else {
+      output.new_comments = [];
       console.log("THERE ARE NO NEW COMMENTS AT THIS TIME");
     }
 
     //always compare like counts
+    const resultsGoogleIds = results.map( (result) => result.id );
     const commentsFromGoogleQuery = await getCommentsByGoogleId(resultsGoogleIds);
     const commentsWithMoreLikes = calculateLikeChanges(commentsFromGoogleQuery, results);
+    output.new_likes = commentsWithMoreLikes;
+    
+    //write any new likes to the db. return the ids for kicks and giggles i guess...
+    if (commentsWithMoreLikes.length > 0) {
+      const updatedLikeCommentIds = await updateCommentLikeCount(commentsWithMoreLikes).then( (newIds) => {
+        return newIds;
+      });
+    }
+
+    return output
 
   } catch (error) {
     console.log(error);
@@ -131,6 +147,23 @@ async function getCommentsByGoogleId(commentGoogleIds) {
 async function getNewAddedComments(newCommentIds) {
   const db = new dbQuery.DBQuery;
   return await db.getCommentsById(newCommentIds);
+}
+
+/**
+ * updateCommentLikeCount
+ *
+ * @param  {object} comment the like_count object
+ * @return {type}           comment_id of update
+ */
+async function updateCommentLikeCount(comments) {
+  const db = new dbQuery.DBQuery;
+
+  let commentIds = comments.map( async (comment) => {
+    let commentId = await db.updateLikeCount(comment);
+    return commentId;
+  });
+
+  return Promise.all(commentIds)
 }
 
 
@@ -233,9 +266,9 @@ function calculateLikeChanges(comments, results) {
       //if the ids match but the like counts don't match
       if(result.id == comment.google_id && result.snippet.likeCount != comment.like_count) {
         let updatedLikes = {
-          id: comment.comment_id,
-          like_count: comment.like_count,
-          like_inc: comment.like_count - result.snippet.likeCount
+          comment_id: comment.comment_id,
+          like_count: result.snippet.likeCount,
+          like_inc: result.snippet.likeCount - comment.like_count
         }
         likeChanges.push(updatedLikes);
       }

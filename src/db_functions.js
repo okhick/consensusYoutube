@@ -90,6 +90,20 @@ class DBQuery {
     });
   }
 
+  async updateLikeCount(comment) {
+    let update = "UPDATE comments SET like_count = $new_count WHERE comment_id = $comment_id"
+
+    return new Promise( (resolve, reject) => {
+      db.run(update, { $new_count:comment.like_count, $comment_id:comment.comment_id }, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.lastID);
+        }
+      });
+    });
+  }
+
   // =========================================================
   // ======================== Getters ========================
   // =========================================================

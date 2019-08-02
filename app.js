@@ -3,6 +3,8 @@ const google = require("./src/google_functions");
 const dbQuery = require("./src/db_functions")
 const fs = require('fs');
 
+//THIS IS A TEST!
+
 
 Max.addHandler("bang", async () => {
   let data = await getThoseComments()
@@ -67,7 +69,7 @@ async function getThoseComments() {
     const commentsFromGoogleQuery = await getCommentsByGoogleId(resultsGoogleIds);
     const commentsWithMoreLikes = calculateLikeChanges(commentsFromGoogleQuery, results);
     output.new_likes = commentsWithMoreLikes;
-    
+
     //write any new likes to the db. return the ids for kicks and giggles i guess...
     if (commentsWithMoreLikes.length > 0) {
       const updatedLikeCommentIds = await updateCommentLikeCount(commentsWithMoreLikes).then( (newIds) => {

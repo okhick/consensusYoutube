@@ -1,0 +1,17 @@
+{
+  "name": "consensus_youtube",
+  "version": "1.0.0",
+  "description": "a package to use the YouTube api to get new comments and likes on a video.",
+  "main": "app.js",
+  "dependencies": {
+    "date-format": "^2.1.0",
+    "googleapis": "^41.0.1",
+    "sqlite3": "^4.0.9"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -9,16 +9,16 @@ Max.addHandler("bang", async () => {
 })
 
 async function getThoseComments() {
-  //let commentQuery = new google.CommentQuery('fD-SWaIT8uk');
-  //let allComments = await commentQuery.getComments();
+  let commentQuery = new google.CommentQuery('fD-SWaIT8uk');
+  let results = await commentQuery.getComments();
   //fs.writeFileSync("./testResults.json", JSON.stringify(allComments, null, 2));
-  // console.log(allComments[0].snippet.authorChannelId);
+  //console.log(allComments[0].snippet.authorChannelId);
 
-  const results = ( () => {
-      let rawResults = fs.readFileSync('testResults.json');
-      return JSON.parse(rawResults);
-    }
-  )();
+  // const results = ( () => {
+  //     let rawResults = fs.readFileSync('testResults.json');
+  //     return JSON.parse(rawResults);
+  //   }
+  // )();
 
   try {
     const output = {};

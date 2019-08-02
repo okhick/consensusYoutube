@@ -4,6 +4,7 @@ const dbQuery = require("./src/db_functions")
 const fs = require('fs');
 
 //THIS IS A TEST!
+// ANOTHER TEST
 
 
 Max.addHandler("bang", async () => {

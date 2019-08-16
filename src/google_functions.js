@@ -19,7 +19,7 @@ class CommentQuery {
     this.videoArgs = {
       part: 'snippet',
       videoId: id,
-      order: 'relevance'
+      order: 'time'
     };
   }
 

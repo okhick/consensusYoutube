@@ -77,7 +77,7 @@ class DBQuery {
           $google_id: comment.id,
           $video_id: video_id,
           $user_id: user,
-          $content: comment.snippet.textDisplay,
+          $content: comment.snippet.textOriginal,
           $like_count: comment.snippet.likeCount,
           $date_added: comment.snippet.publishedAt
         }, function(err) {
@@ -94,7 +94,7 @@ class DBQuery {
     let update = "UPDATE comments SET like_count = $new_count WHERE comment_id = $comment_id"
 
     return new Promise( (resolve, reject) => {
-      db.run(update, { $new_count:comment.like_count, $comment_id:comment.comment_id }, function(err) {
+      db.run(insert, { $new_count:comment.like_count, $comment_id:comment.comment_id }, function(err) {
         if (err) {
           reject(err);
         } else {

@@ -9,13 +9,13 @@ Max.addHandler("bang", async () => {
 })
 
 async function getThoseComments() {
-  //these two lines read the google api	
-  let commentQuery = new google.CommentQuery('fD-SWaIT8uk');
+  //these two lines read the google api
+  let commentQuery = new google.CommentQuery('JbbjZDjVIig');
   let results = await commentQuery.getComments();
-  
+
   // Uncomment this line to write sudo resutls file
   //fs.writeFileSync("./testResults.json", JSON.stringify(results, null, 2));
-	
+
   // Uncomment out to read from sudo file
   // const results = ( () => {
   //     let rawResults = fs.readFileSync('testResults.json');

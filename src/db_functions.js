@@ -94,7 +94,7 @@ class DBQuery {
     let update = "UPDATE comments SET like_count = $new_count WHERE comment_id = $comment_id"
 
     return new Promise( (resolve, reject) => {
-      db.run(insert, { $new_count:comment.like_count, $comment_id:comment.comment_id }, function(err) {
+      db.run(update, { $new_count:comment.like_count, $comment_id:comment.comment_id }, function(err) {
         if (err) {
           reject(err);
         } else {

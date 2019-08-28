@@ -6,7 +6,7 @@ const fs = require('fs');
 Max.addHandler("bang", async () => {
   let data = await getThoseComments()
   Max.outlet(data);
-})
+});
 
 async function getThoseComments() {
   //these two lines read the google api
@@ -57,18 +57,29 @@ async function getThoseComments() {
 
       //get the new comment content
       const newlyAddedComments = await getNewAddedComments(newCommentIds);
+      const newlyAddedCommentsLikes = await checkNewCommentsForLikes(newCommentIds);
+
       output.new_comments = newlyAddedComments;
+      output.new_likes = newlyAddedCommentsLikes;
 
     } else {
       output.new_comments = [];
-      console.log("THERE ARE NO NEW COMMENTS AT THIS TIME");
+      // console.log("THERE ARE NO NEW COMMENTS AT THIS TIME");
     }
 
     //always compare like counts
     const resultsGoogleIds = results.map( (result) => result.id );
     const commentsFromGoogleQuery = await getCommentsByGoogleId(resultsGoogleIds);
     const commentsWithMoreLikes = calculateLikeChanges(commentsFromGoogleQuery, results);
-    output.new_likes = commentsWithMoreLikes;
+
+    //If any new comments have likes:
+    if (output.new_likes) {
+      commentsWithMoreLikes.forEach( (comment) => {
+        output.new_likes.push(comment);
+      });
+    } else { //If there are no new comments with likes.
+      output.new_likes = commentsWithMoreLikes;
+    }
 
     //write any new likes to the db. return the ids for kicks and giggles i guess...
     if (commentsWithMoreLikes.length > 0) {
@@ -116,6 +127,23 @@ async function checkNewCommentsForNewUsers(newComments) {
     return user.snippet.authorChannelId.value;
   });
   return newUsersGoogleIds;
+}
+
+/**
+ * checkNewCommentsForLikes - check new comments for likes
+ *
+ * @param  {array} newCommentIds the comment ids of new comments
+ * @return {array}               all the new likes formatted to output to Max
+ */
+async function checkNewCommentsForLikes(newCommentIds) {
+  const db = new dbQuery.DBQuery;
+  const likes = await db.getLikesById(newCommentIds);
+
+  likes.forEach( (comment) => {
+    comment.like_inc = comment.like_count;
+  });
+
+  return likes;
 }
 
 /**
@@ -167,7 +195,6 @@ async function updateCommentLikeCount(comments) {
 
   return Promise.all(commentIds)
 }
-
 
 // =========================================================
 // ========================= Logic =========================

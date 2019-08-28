@@ -177,6 +177,12 @@ class DBQuery {
     });
   }
 
+  /**
+   * async getCommentsByGoogleId - return id and like count
+   *
+   * @param  {Array} comment_ids array of comment_ids
+   * @return {Array}             comment_id and like_count 
+   */
   async getCommentsByGoogleId(google_ids) {
     let select = "SELECT * FROM comments WHERE google_id in";
 
@@ -186,6 +192,17 @@ class DBQuery {
         if (row) { resolve(row) }
       });
     });
+  }
+
+  async getLikesById(ids) {
+    let select = "SELECT comment_id, like_count FROM comments WHERE comment_id in";
+
+    return new Promise( (resolve, reject) => {
+      db.all(`${select} (${ids.map( _ => '?')})`, ids, (err, row) => {
+        if (err) { reject(err) }
+        if (row) { resolve(row) }
+      });
+    })
   }
   // =========================================================
   // ==================== Helper Functions ===================

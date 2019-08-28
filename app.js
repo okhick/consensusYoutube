@@ -10,7 +10,7 @@ Max.addHandler("bang", async () => {
 
 async function getThoseComments() {
   //these two lines read the google api	
-  let commentQuery = new google.CommentQuery('fD-SWaIT8uk');
+  let commentQuery = new google.CommentQuery('JbbjZDjVIig');
   let results = await commentQuery.getComments();
   
   // Uncomment this line to write sudo resutls file

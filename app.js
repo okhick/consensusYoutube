@@ -1,12 +1,29 @@
-const Max = require('max-api');
+// const Max = require('max-api');
 const google = require("./src/google_functions");
 const dbQuery = require("./src/db_functions")
 const fs = require('fs');
 
-Max.addHandler("bang", async () => {
-  let data = await getThoseComments()
-  Max.outlet(data);
-})
+// Max.addHandler("bang", async () => {
+//   let data = await getThoseComments()
+//   Max.outlet(data);
+// })
+
+let chatId;
+// detailTest();
+async function detailTest() {
+  let streamDetails = new google.StreamDetails('hHW1oY26kxQ');
+  chatId = await streamDetails.getChatId();
+  console.log("CHAT ID IS NOW ", chatId)
+}
+
+async function getLiveChat() {
+  let chatQuery = new google.ChatQuery('Cg0KC2hIVzFvWTI2a3hRKicKGFVDU0o0Z2tWQzZOcnZJSTh1bXp0ZjBPdxILaEhXMW9ZMjZreFE');
+  let messages = await chatQuery.getLiveChatData();
+  console.log(messages);
+}
+getLiveChat();
+
+
 
 async function getThoseComments() {
   let commentQuery = new google.CommentQuery('fD-SWaIT8uk');

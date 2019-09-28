@@ -14,12 +14,88 @@ const youtube = google.youtube({
    auth: creds.auth
 });
 
-class CommentQuery {
+class StreamDetails {
   constructor(id) {
+    this.queryArgs = {
+      part: 'liveStreamingDetails',
+      id: id,
+    };
+  }
+
+  _getLiveStreamingDetails() {
+    return new Promise ((resolve, reject) => {
+      youtube.videos.list(this.queryArgs, (err, res) => {
+          if (err) { reject(err); }
+          else if (res) { resolve(res); }
+      });
+    });
+  }
+
+  async getChatId() {
+    try {
+      let streamingData = await this._getLiveStreamingDetails();
+      let chatId = streamingData.data.items[0].liveStreamingDetails.activeLiveChatId;
+      return new Promise ( (resolve) => {
+        resolve(chatId);
+      })
+    } catch (e) {
+      console.log(e);
+    }
+  }
+}
+
+class ChatQuery {
+  constructor(liveChatId) {
+    this.queryArgs = {
+      liveChatId: liveChatId,
+      part: 'snippet,authorDetails'
+    };
+  }
+
+  getLiveChatData() {
+    return new Promise( async (resolve, reject) => {
+      try {
+        let chatData = await this._requestLiveChatData();
+        let messageData = chatData.data.items.map(chatObject => {
+          return {
+            message: {
+              id: chatObject.snippet.id,
+              displayMessage: chatObject.snippet.displayMessage,
+            },
+            author: {
+              authorId: chatObject.authorDetails.channelId,
+              moderator: chatObject.authorDetails.isChatModerator
+            }
+          };
+        });
+        resolve({
+          nextPoll: chatData.data.pollingIntervalMillis,
+          messageData:messageData
+        });
+      } catch(e) {
+        reject(e)
+      }
+    });
+  }
+
+  _requestLiveChatData() {
+    return new Promise ((resolve, reject) => {
+      youtube.liveChatMessages.list(this.queryArgs, (err, res) => {
+          if (err) { reject(err); }
+          else if (res) { resolve(res); }
+      });
+    });
+  }
+
+  _drillDownToChat() {
+
+  }
+}
+
+class CommentQuery {
+  constructor(chatId) {
     this.videoArgs = {
-      part: 'snippet',
-      videoId: id,
-      order: 'relevance'
+      id: id,
     };
   }
 
@@ -71,5 +147,7 @@ class CommentQuery {
 }
 
 module.exports = {
-  CommentQuery: CommentQuery
+  CommentQuery: CommentQuery,
+  ChatQuery: ChatQuery,
+  StreamDetails: StreamDetails
 }

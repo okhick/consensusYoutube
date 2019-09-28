@@ -4,13 +4,13 @@
 		"appversion" : 		{
 			"major" : 8,
 			"minor" : 0,
-			"revision" : 6,
+			"revision" : 8,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 759.0, 210.0, 857.0, 474.0 ],
+		"rect" : [ 319.0, 316.0, 1029.0, 621.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -39,11 +39,46 @@
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
 				"box" : 				{
-					"id" : "obj-13",
+					"id" : "obj-11",
 					"maxclass" : "dict.view",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 94.5, 197.0, 292.0, 212.0 ]
+					"patching_rect" : [ 94.5, 277.0, 283.0, 159.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-10",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 21.0, 209.0, 32.0, 22.0 ],
+					"text" : "print"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-9",
+					"maxclass" : "toggle",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "int" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 329.0, 68.0, 24.0, 24.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-7",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 307.0, 105.0, 55.0, 22.0 ],
+					"text" : "query $1"
 				}
 
 			}
@@ -74,7 +109,7 @@
 					"numoutlets" : 1,
 					"offset" : [ 0.0, 0.0 ],
 					"outlettype" : [ "bang" ],
-					"patching_rect" : [ 404.0, 197.0, 292.0, 212.0 ],
+					"patching_rect" : [ 404.0, 197.0, 400.0, 220.0 ],
 					"viewvisibility" : 1
 				}
 
@@ -98,20 +133,8 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 94.5, 55.0, 66.0, 22.0 ],
-					"text" : "script start"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-7",
-					"maxclass" : "button",
-					"numinlets" : 1,
-					"numoutlets" : 1,
-					"outlettype" : [ "bang" ],
-					"parameter_enable" : 0,
-					"patching_rect" : [ 46.0, 81.0, 24.0, 24.0 ]
+					"patching_rect" : [ 63.5, 34.0, 338.0, 22.0 ],
+					"text" : "script start https://www.youtube.com/watch?v=hHW1oY26kxQ"
 				}
 
 			}
@@ -126,6 +149,8 @@
 					"saved_object_attributes" : 					{
 						"autostart" : 0,
 						"defer" : 0,
+						"node_bin_path" : "",
+						"npm_bin_path" : "",
 						"watch" : 0
 					}
 ,
@@ -157,7 +182,16 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-13", 0 ],
+					"destination" : [ "obj-10", 0 ],
+					"order" : 1,
+					"source" : [ "obj-3", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-11", 0 ],
+					"order" : 0,
 					"source" : [ "obj-3", 0 ]
 				}
 
@@ -176,10 +210,17 @@
 				}
 
 			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-7", 0 ],
+					"source" : [ "obj-9", 0 ]
+				}
+
+			}
  ],
 		"dependency_cache" : [ 			{
 				"name" : "app.js",
-				"bootpath" : "~/dev/consensus_youtube",
+				"bootpath" : "~/dev/consensusYoutube",
 				"patcherrelativepath" : ".",
 				"type" : "TEXT",
 				"implicit" : 1

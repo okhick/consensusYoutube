@@ -1,4 +1,4 @@
-// const Max = require('max-api');
+const Max = require('max-api');
 const google = require("./src/google_functions");
 const dbQuery = require("./src/db_functions")
 const fs = require('fs');
@@ -7,8 +7,10 @@ const fs = require('fs');
 // ========================= Setup =========================
 // =========================================================
 
+//https://www.youtube.com/watch?v=hHW1oY26kxQ - For testing.
+ 
 const IDs = {
-  youtubeId: parseVideoId('https://www.youtube.com/watch?v=hHW1oY26kxQ'),
+  youtubeId: parseVideoId(process.argv[2]),
 }
 
 const loopArgs = {
@@ -26,15 +28,27 @@ getVideoId(IDs.youtubeId).then(id => {
   IDs.videoId = id;
 });
 
+//setup handlers for Max.
+const handlers = {
+  query: (toggle) => {
+    if (toggle == 1) {
+      loopArgs.isRunning = true;
+      loopArgs.waitInterval = 100;
+      mainLoop();
+    } else if (toggle == 0) {
+      loopArgs.isRunning = false;
+    } else {
+      console.log("Please enter either a 0 or 1.");
+    }
+  }, 
+
+  //nothing else for now...
+}
+Max.addHandlers(handlers);
 
 // =========================================================
 // ========================== Main =========================
 // =========================================================
-
-// Max.addHandler("bang", async () => {
-//   let data = await getThoseComments()
-//   Max.outlet(data);
-// })
 
 /**
  * mainLoop makes sure things are set and calls the process function
@@ -63,7 +77,6 @@ function mainLoop() {
 
 /**
  * processLiveChat() - runs the main processing functions. Calls the main loop upon success
- *
  */
 async function processLiveChat() {
   const output = {};
@@ -101,7 +114,10 @@ async function processLiveChat() {
   //get the new message content
   const newlyAddedMessages = await getNewAddedMessages(newMessageIds);
 
+  //output to Max
   output.new_messages = newlyAddedMessages
+  const outputString = JSON.stringify(output); //There seems to be a bug (or a feature) where you can't output directly an object.
+  Max.outlet(outputString);
 
   //order for next round
   loopArgs.waitInterval = messageData.nextPoll;

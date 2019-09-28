@@ -89,20 +89,6 @@ class DBQuery {
     });
   }
 
-  async updateLikeCount(comment) {
-    let update = "UPDATE comments SET like_count = $new_count WHERE comment_id = $comment_id"
-
-    return new Promise( (resolve, reject) => {
-      db.run(update, { $new_count:comment.like_count, $comment_id:comment.comment_id }, function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this.lastID);
-        }
-      });
-    });
-  }
-
   // =========================================================
   // ======================== Getters ========================
   // =========================================================
@@ -143,12 +129,12 @@ class DBQuery {
   }
 
   /**
-   * async getMessagesByGoogleId - takes message_ids and returns matching users
+   * async getMessagesById - takes message_ids and returns matching users
    *
    * @param  {array} message_ids an array of message_ids
    * @return {array}             returns message id and content
    */
-  async getMessagesByGoogleId(message_ids) {
+  async getMessagesById(message_ids) {
     let select = "SELECT message_id, content FROM messages WHERE message_id in";
 
     return new Promise( (resolve, reject) => {
@@ -176,16 +162,6 @@ class DBQuery {
     });
   }
 
-  async getMessagesByGoogleId(google_ids) {
-    let select = "SELECT * FROM messages WHERE google_id in";
-
-    return new Promise( (resolve, reject) => {
-      db.all(`${select} (${google_ids.map( _ => '?')})`, google_ids, (err, row) => {
-        if (err) { reject(err) }
-        if (row) { resolve(row) }
-      });
-    });
-  }
   // =========================================================
   // ==================== Helper Functions ===================
   // =========================================================

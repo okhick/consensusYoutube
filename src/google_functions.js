@@ -61,6 +61,7 @@ class ChatQuery {
             message: {
               id: chatObject.snippet.id,
               displayMessage: chatObject.snippet.displayMessage,
+              publishedAt: chatObject.snippet.publishedAt
             },
             author: {
               authorId: chatObject.authorDetails.channelId,

@@ -59,7 +59,7 @@ class ChatQuery {
         let messageData = chatData.data.items.map(chatObject => {
           return {
             message: {
-              id: chatObject.snippet.id,
+              id: chatObject.id,
               displayMessage: chatObject.snippet.displayMessage,
               publishedAt: chatObject.snippet.publishedAt
             },

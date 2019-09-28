@@ -3,14 +3,17 @@ const google = require("./src/google_functions");
 const dbQuery = require("./src/db_functions")
 const fs = require('fs');
 
-// Max.addHandler("bang", async () => {
-//   let data = await getThoseComments()
-//   Max.outlet(data);
-// })
+// =========================================================
+// ========================= Setup =========================
+// =========================================================
 
 const IDs = {
   youtubeId: parseVideoId('https://www.youtube.com/watch?v=hHW1oY26kxQ'),
-  liveChatId: null
+}
+
+const loopArgs = {
+  waitInterval: 1000,
+  isRunning: true
 }
 
 //get the live chat id and assign it when it comes back
@@ -18,13 +21,54 @@ getStreamDetails(IDs.youtubeId).then(id => {
   IDs.liveChatId = id;
 });
 
+//get the video_id of the video. Either a new id or existing.
 getVideoId(IDs.youtubeId).then(id => {
   IDs.videoId = id;
-})
+});
 
+
+// =========================================================
+// ========================== Main =========================
+// =========================================================
+
+// Max.addHandler("bang", async () => {
+//   let data = await getThoseComments()
+//   Max.outlet(data);
+// })
+
+/**
+ * mainLoop makes sure things are set and calls the process function
+ */
+function mainLoop() {
+  if(loopArgs.isRunning) {
+
+    setTimeout(() => {
+
+      //if everything is set, run it!
+      if(IDs.youtubeId != null && IDs.videoId != null) {
+        processLiveChat();
+      } else {
+        //It's possible that we're waiting on some async. Give it a second to return.
+        try {
+          setTimeout(() => processLiveChat(), 1000);
+        } catch(e) {
+          console.log("Looks like an ID is not set...");
+        }
+      }
+
+    }, loopArgs.waitInterval);
+  }
+
+}
+
+/**
+ * processLiveChat() - runs the main processing functions. Calls the main loop upon success
+ *
+ */
 async function processLiveChat() {
+  const output = {};
   const chatQuery = new google.ChatQuery(IDs.liveChatId);
-  const videoId = 12; //for now...
+  const videoId = IDs.videoId;
   const messageData = await chatQuery.getLiveChatData();
 
   const newMessages = await checkResultsForNewMessages(messageData.messageData, videoId);
@@ -56,13 +100,24 @@ async function processLiveChat() {
 
   //get the new message content
   const newlyAddedMessages = await getNewAddedMessages(newMessageIds);
+
+  output.new_messages = newlyAddedMessages
+
+  //order for next round
+  loopArgs.waitInterval = messageData.nextPoll;
+  mainLoop();
 }
-// processLiveChat();
 
 // =========================================================
 // ======================== Helpers ========================
 // =========================================================
 
+/**
+ * parseVideoId() - takes a url and strips out the google video id
+ *
+ * @param {string} url must be a youtube url
+ * @returns {string} the google id
+ */
 function parseVideoId(url) {
   const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
   const match = url.match(regExp);
@@ -73,6 +128,12 @@ function parseVideoId(url) {
   }
 }
 
+/**
+ * getStreamDetails() - querys google to get liveChatId
+ *
+ * @param {string} youtubeId
+ * @returns {promise string}  
+ */
 function getStreamDetails(youtubeId) {
   return new Promise((resolve, reject) => {
   try {
@@ -85,6 +146,12 @@ function getStreamDetails(youtubeId) {
   });
 }
 
+/**
+ * getVideoId - querys the db and returns the video_id 
+ *
+ * @param {string} youtubeId
+ * @returns {int} video_id
+ */
 async function getVideoId(youtubeId) {
   const db = new dbQuery.DBQuery;
   return await db.checkVideo(youtubeId);

@@ -5,7 +5,6 @@ const db = new sqlite3.Database('./youtubedata.db', (err) => {
 });
 
 class DBQuery {
-
   constructor() {
     this.now = dateFormat.asString(dateFormat.ISO8601_FORMAT, new Date());
   }
@@ -20,7 +19,7 @@ class DBQuery {
    * @param  {string} google_id
    * @return {int}              the ID of the row created
    */
-  async newVideo(google_id) {
+  async checkVideo(google_id) {
     let videoExists = await this._checkExists("videos", "google_id", google_id);
 
     if (!videoExists) {
@@ -34,8 +33,13 @@ class DBQuery {
           }
         });
       });
+
     } else if (videoExists) {
-      console.log("ENTRY ALREADY EXISTS!");
+      let video_id = await this.getVideoByGoogleId(google_id);
+      return new Promise ((resolve) => {
+        resolve(video_id[0].video_id);
+      });
+
     } else {
       console.log("HOW DID YOU EVEN GET HERE?! SOMETHING HAS GONE TERRIBLY WRONG...");
     }
@@ -62,24 +66,23 @@ class DBQuery {
   }
 
   /**
-   * async newComment - write a new comment
+   * async newMessage - write a new message
    *
-   * @param  {Onject} comment  the google result
+   * @param  {Onject} message  the google result
    * @param  {Int}    video_id the video_id
    * @param  {Int}    users    the user_id
    * @return {Array}           the new ids
    */
-  async newComment(comment, video_id, user){
-    let insert = "INSERT INTO comments (google_id, video_id, user_id, content, like_count, date_added) VALUES ($google_id, $video_id, $user_id, $content, $like_count, $date_added)";
+  async newMessage(message, video_id, user){
+    let insert = "INSERT INTO messages (google_id, video_id, user_id, content, date_added) VALUES ($google_id, $video_id, $user_id, $content, $date_added)";
 
     return new Promise( (resolve, reject) => {
       db.run(insert, {
-          $google_id: comment.id,
+          $google_id: message.id,
           $video_id: video_id,
           $user_id: user,
-          $content: comment.snippet.textOriginal,
-          $like_count: comment.snippet.likeCount,
-          $date_added: comment.snippet.publishedAt
+          $content: message.displayMessage,
+          $date_added: message.publishedAt,
         }, function(err) {
           if (err) {
             reject(err);
@@ -90,32 +93,29 @@ class DBQuery {
     });
   }
 
-  async updateLikeCount(comment) {
-    let update = "UPDATE comments SET like_count = $new_count WHERE comment_id = $comment_id"
+  // =========================================================
+  // ======================== Getters ========================
+  // =========================================================
+  
+  getVideoByGoogleId(google_id) {
+    let select = "SELECT video_id FROM videos WHERE google_id = $google_id";
 
-    return new Promise( (resolve, reject) => {
-      db.run(update, { $new_count:comment.like_count, $comment_id:comment.comment_id }, function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this.lastID);
-        }
+    return new Promise((resolve, reject) => {
+      db.all(select, {$google_id:google_id}, (err, row) => {
+        if (err) { reject(err) }
+        if (row) { resolve(row) }
       });
     });
   }
 
-  // =========================================================
-  // ======================== Getters ========================
-  // =========================================================
-
   /**
-   * getCommentsForVideo - filters for all comments by video_id
+   * getMessagesForVideo - filters for all Messages by video_id
    *
    * @param  {int} video_id
-   * @return {type}          an array of all comments returned
+   * @return {type}          an array of all Messages returned
    */
-  getCommentsForVideo(video_id) {
-    let select = "SELECT comment_id, google_id, user_id, content, like_count FROM comments WHERE video_id = $video_id";
+  getMessagesForVideo(video_id) {
+    let select = "SELECT message_id, google_id, user_id, content FROM messages WHERE video_id = $video_id";
 
     return new Promise( (resolve, reject) => {
       db.all(select, { $video_id:video_id }, (err, row) => {
@@ -144,16 +144,16 @@ class DBQuery {
   }
 
   /**
-   * async getCommentsById - akes comment_ids and returns matching users
+   * async getMessagesById - takes message_ids and returns matching users
    *
-   * @param  {array} comment_ids an array of comment_ids
-   * @return {array}             returns comment id and content
+   * @param  {array} message_ids an array of message_ids
+   * @return {array}             returns message id and content
    */
-  async getCommentsById(comment_ids) {
-    let select = "SELECT comment_id, content FROM comments WHERE comment_id in";
+  async getMessagesById(message_ids) {
+    let select = "SELECT message_id, content FROM messages WHERE message_id in";
 
     return new Promise( (resolve, reject) => {
-      db.all(`${select} (${comment_ids.map( _ => '?')})`, comment_ids, (err, row) => {
+      db.all(`${select} (${message_ids.map( _ => '?')})`, message_ids, (err, row) => {
         if (err) { reject(err) }
         if (row) { resolve(row) }
       });
@@ -177,33 +177,6 @@ class DBQuery {
     });
   }
 
-  /**
-   * async getCommentsByGoogleId - return id and like count
-   *
-   * @param  {Array} comment_ids array of comment_ids
-   * @return {Array}             comment_id and like_count 
-   */
-  async getCommentsByGoogleId(google_ids) {
-    let select = "SELECT * FROM comments WHERE google_id in";
-
-    return new Promise( (resolve, reject) => {
-      db.all(`${select} (${google_ids.map( _ => '?')})`, google_ids, (err, row) => {
-        if (err) { reject(err) }
-        if (row) { resolve(row) }
-      });
-    });
-  }
-
-  async getLikesById(ids) {
-    let select = "SELECT comment_id, like_count FROM comments WHERE comment_id in";
-
-    return new Promise( (resolve, reject) => {
-      db.all(`${select} (${ids.map( _ => '?')})`, ids, (err, row) => {
-        if (err) { reject(err) }
-        if (row) { resolve(row) }
-      });
-    })
-  }
   // =========================================================
   // ==================== Helper Functions ===================
   // =========================================================

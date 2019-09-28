@@ -1,75 +1,127 @@
-const {google} = require('googleapis');
+const { google } = require('googleapis');
 const fs = require('fs');
 
 // Load up from the creds json with Google API key and info.
-const creds = ( () => {
-    let credsRaw = fs.readFileSync('creds.json');
-    return JSON.parse(credsRaw)
-  }
+const creds = (() => {
+  let credsRaw = fs.readFileSync('creds.json');
+  return JSON.parse(credsRaw)
+}
 )();
 
 //Set up the class with creds
 const youtube = google.youtube({
-   version: creds.version,
-   auth: creds.auth
+  version: creds.version,
+  auth: creds.auth
 });
 
-class CommentQuery {
+// =========================================================
+// ======================== Streams ========================
+// =========================================================
+
+class StreamDetails {
   constructor(id) {
-    this.videoArgs = {
-      part: 'snippet',
-      videoId: id,
-      order: 'time'
+    this.queryArgs = {
+      part: 'liveStreamingDetails',
+      id: id,
     };
   }
 
   /**
-   * async getComments - Request a comments list from YouTube and parses them into an array
-   *
-   * @return {Array} An array of comments objects
-   */
-  async getComments() {
-    try{
-      this.rawComments = await this._getRawComments();
-      this.comments = this._drillDownToComments(this.rawComments);
-      return new Promise( (resolve) => {
-        resolve(this.comments);
-      });
-    }
-    catch(e) {
+   *getChatId() - parses stream details and returns the ID
+  *
+  * @returns {string} activeLiveChatId
+  * @memberof StreamDetails
+  */
+  async getChatId() {
+    try {
+      let streamingData = await this._getLiveStreamingDetails();
+      let chatId = streamingData.data.items[0].liveStreamingDetails.activeLiveChatId;
+      return new Promise((resolve) => {
+        resolve(chatId);
+      })
+    } catch (e) {
       console.log(e);
     }
   }
-
+  
   /**
-   * _getRawComments - The actual request to YouTube
+   * _getLiveStreamingDetails - requests info about a stream
    *
-   * @return {Object} A full object with lots of data about and including comments
+   * @returns {object} stream details
+   * @memberof StreamDetails
    */
-  _getRawComments() {
-    return new Promise ((resolve, reject) => {
-      youtube.commentThreads.list(this.videoArgs, (err, res) => {
+  _getLiveStreamingDetails() {
+    return new Promise((resolve, reject) => {
+      youtube.videos.list(this.queryArgs, (err, res) => {
         if (err) { reject(err); }
         else if (res) { resolve(res); }
       });
     });
   }
+}
+
+// =========================================================
+// ======================== Chat ===========================
+// =========================================================
+
+class ChatQuery {
+  constructor(liveChatId) {
+    this.queryArgs = {
+      liveChatId: liveChatId,
+      part: 'snippet,authorDetails'
+    };
+  }
 
   /**
-   * _drillDownToComments - gets only the comment data and returns an array of objects.
+   * getLiveChatData() - returns only useful information from the return chat data
    *
-   * @param  {Object} rawComments the full response from YouTube returned by _getRawComments
-   * @return {Array}              An array with data for each comment
+   * @returns {object} {nextPoll:float, messageData:object}
+   * @memberof ChatQuery
    */
-  _drillDownToComments(rawComments) {
-    let comments = [];
-    rawComments.data.items.forEach( (comment) => {
-      comments.push(comment.snippet.topLevelComment);
+  getLiveChatData() {
+    return new Promise(async (resolve, reject) => {
+      try {
+        let chatData = await this._requestLiveChatData();
+        let messageData = chatData.data.items.map(chatObject => {
+          return {
+            message: {
+              id: chatObject.id,
+              displayMessage: chatObject.snippet.displayMessage,
+              publishedAt: chatObject.snippet.publishedAt
+            },
+            author: {
+              authorId: chatObject.authorDetails.channelId,
+              moderator: chatObject.authorDetails.isChatModerator
+            }
+          };
+        });
+        resolve({
+          nextPoll: chatData.data.pollingIntervalMillis,
+          messageData: messageData
+        });
+      } catch (e) {
+        reject(e)
+      }
     });
-    return comments;
+  }
+
+  /**
+   * _requestLiveChatData() - requests live chat data from youtube
+   *
+   * @returns {object} chat object from google
+   * @memberof ChatQuery
+   */
+  _requestLiveChatData() {
+    return new Promise((resolve, reject) => {
+      youtube.liveChatMessages.list(this.queryArgs, (err, res) => {
+        if (err) { reject(err); }
+        else if (res) { resolve(res); }
+      });
+    });
   }
 }
 
 module.exports = {
-  CommentQuery: CommentQuery
+  ChatQuery: ChatQuery,
+  StreamDetails: StreamDetails
 }

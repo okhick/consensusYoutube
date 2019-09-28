@@ -5,7 +5,6 @@ const db = new sqlite3.Database('./youtubedata.db', (err) => {
 });
 
 class DBQuery {
-
   constructor() {
     this.now = dateFormat.asString(dateFormat.ISO8601_FORMAT, new Date());
   }
@@ -20,7 +19,7 @@ class DBQuery {
    * @param  {string} google_id
    * @return {int}              the ID of the row created
    */
-  async newVideo(google_id) {
+  async checkVideo(google_id) {
     let videoExists = await this._checkExists("videos", "google_id", google_id);
 
     if (!videoExists) {
@@ -34,8 +33,13 @@ class DBQuery {
           }
         });
       });
+
     } else if (videoExists) {
-      console.log("ENTRY ALREADY EXISTS!");
+      let video_id = await this.getVideoByGoogleId(google_id);
+      return new Promise ((resolve) => {
+        resolve(video_id[0].video_id);
+      });
+
     } else {
       console.log("HOW DID YOU EVEN GET HERE?! SOMETHING HAS GONE TERRIBLY WRONG...");
     }
@@ -92,6 +96,17 @@ class DBQuery {
   // =========================================================
   // ======================== Getters ========================
   // =========================================================
+  
+  getVideoByGoogleId(google_id) {
+    let select = "SELECT video_id FROM videos WHERE google_id = $google_id";
+
+    return new Promise((resolve, reject) => {
+      db.all(select, {$google_id:google_id}, (err, row) => {
+        if (err) { reject(err) }
+        if (row) { resolve(row) }
+      });
+    });
+  }
 
   /**
    * getMessagesForVideo - filters for all Messages by video_id

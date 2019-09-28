@@ -264,4 +264,58 @@ async function checkResultsForNewComments(results, videoId) {
     });
     return likeChanges;
   }
+
+  class CommentQuery {
+    constructor(chatId) {
+      this.videoArgs = {
+        id: id,
+      };
+    }
+  
+    /**
+     * async getComments - Request a comments list from YouTube and parses them into an array
+     *
+     * @return {Array} An array of comments objects
+     */
+    async getComments() {
+      try {
+        this.rawComments = await this._getRawComments();
+        this.comments = this._drillDownToComments(this.rawComments);
+        return new Promise((resolve) => {
+          resolve(this.comments);
+        });
+      }
+      catch (e) {
+        console.log(e);
+      }
+    }
+  
+    /**
+     * _getRawComments - The actual request to YouTube
+     *
+     * @return {Object} A full object with lots of data about and including comments
+     */
+    _getRawComments() {
+      return new Promise((resolve, reject) => {
+        youtube.commentThreads.list(this.videoArgs, (err, res) => {
+          if (err) { reject(err); }
+          else if (res) { resolve(res); }
+        });
+      });
+    }
+  
+    /**
+     * _drillDownToComments - gets only the comment data and returns an array of objects.
+     *
+     * @param  {Object} rawComments the full response from YouTube returned by _getRawComments
+     * @return {Array}              An array with data for each comment
+     */
+    _drillDownToComments(rawComments) {
+      let comments = [];
+      rawComments.data.items.forEach((comment) => {
+        comments.push(comment.snippet.topLevelComment);
+      });
+      return comments;
+    }
+  }
   

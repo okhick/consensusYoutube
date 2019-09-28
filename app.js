@@ -8,16 +8,22 @@ const fs = require('fs');
 //   Max.outlet(data);
 // })
 
-let chatId;
-// detailTest();
-async function detailTest() {
-  let streamDetails = new google.StreamDetails('hHW1oY26kxQ');
-  chatId = await streamDetails.getChatId();
-  console.log("CHAT ID IS NOW ", chatId)
+const IDs = {
+  youtubeId: parseVideoId('https://www.youtube.com/watch?v=hHW1oY26kxQ'),
+  liveChatId: null
 }
 
+//get the live chat id and assign it when it comes back
+getStreamDetails(IDs.youtubeId).then(id => {
+  IDs.liveChatId = id;
+});
+
+getVideoId(IDs.youtubeId).then(id => {
+  IDs.videoId = id;
+})
+
 async function processLiveChat() {
-  const chatQuery = new google.ChatQuery('Cg0KC2hIVzFvWTI2a3hRKicKGFVDU0o0Z2tWQzZOcnZJSTh1bXp0ZjBPdxILaEhXMW9ZMjZreFE');
+  const chatQuery = new google.ChatQuery(IDs.liveChatId);
   const videoId = 12; //for now...
   const messageData = await chatQuery.getLiveChatData();
 
@@ -51,11 +57,38 @@ async function processLiveChat() {
   //get the new message content
   const newlyAddedMessages = await getNewAddedMessages(newMessageIds);
 }
-processLiveChat();
+// processLiveChat();
 
 // =========================================================
 // ======================== Helpers ========================
 // =========================================================
+
+function parseVideoId(url) {
+  const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2].length == 11) {
+    return match[2];
+  } else {
+    console.log("Cannot parse YouTube id.")
+  }
+}
+
+function getStreamDetails(youtubeId) {
+  return new Promise((resolve, reject) => {
+  try {
+    let streamDetails = new google.StreamDetails(youtubeId);
+    let chatId = streamDetails.getChatId();
+      resolve(chatId); 
+    } catch(e) {
+      reject(e);
+    }
+  });
+}
+
+async function getVideoId(youtubeId) {
+  const db = new dbQuery.DBQuery;
+  return await db.checkVideo(youtubeId);
+}
 
 /**
  * checkResultsForNewMessages
@@ -98,7 +131,7 @@ async function getUsersByGoogleId(newMessageUserGoogleIds) {
 }
 
 /**
- * getNewAddedMessages - NOT USED?!
+ * getNewAddedMessages
  *
  * @param  {array} newMessageIds array of comment ids
  * @return {array}               result of comment_id and content

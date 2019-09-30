@@ -3,97 +3,132 @@ const google = require("./src/google_functions");
 const dbQuery = require("./src/db_functions")
 const fs = require('fs');
 
-Max.addHandler("bang", async () => {
-  let data = await getThoseComments()
-  Max.outlet(data);
-});
+// =========================================================
+// ========================= Setup =========================
+// =========================================================
 
+<<<<<<< HEAD
 async function getThoseComments() {
   //these two lines read the google api
   let commentQuery = new google.CommentQuery('UCEjbSDzSpc3ft1d5APMLxsQ');
   let results = await commentQuery.getComments();
+=======
+//https://www.youtube.com/watch?v=hHW1oY26kxQ - For testing.
+ 
+const IDs = {
+  youtubeId: parseVideoId(process.argv[2]),
+}
+>>>>>>> 761fd589872e140909b95fbc68584f4fcd4937a9
 
-  // Uncomment this line to write sudo resutls file
-  //fs.writeFileSync("./testResults.json", JSON.stringify(results, null, 2));
+const loopArgs = {
+  waitInterval: 1000,
+  isRunning: true
+}
 
-  // Uncomment out to read from sudo file
-  // const results = ( () => {
-  //     let rawResults = fs.readFileSync('testResults.json');
-  //     return JSON.parse(rawResults);
-  //   }
-  // )();
+//get the live chat id and assign it when it comes back
+getStreamDetails(IDs.youtubeId).then(id => {
+  IDs.liveChatId = id;
+});
 
-  try {
-    const output = {};
-    const videoId = 12; //for now...
-    const newComments = await checkResultsForNewComments(results, videoId);
+//get the video_id of the video. Either a new id or existing.
+getVideoId(IDs.youtubeId).then(id => {
+  IDs.videoId = id;
+});
 
-    //if there are new comments
-    if (newComments.length > 0) {
-      const newUsersGoogleIds = await checkNewCommentsForNewUsers(newComments);
-
-      //write any new users to the db. return the ids for kicks and giggles i guess...
-      if (newUsersGoogleIds.length > 0) {
-        const newUserIds = await writeNew(newUsersGoogleIds, 'user').then( (newIds) => {
-          return newIds;
-        });
-      }
-
-      //get new comment google_ids into an array so we can search for the user_ids
-      const newCommentUserGoogleIds = results.map( (comment) => comment.snippet.authorChannelId.value );
-
-      //get google ids and user ids
-      const newCommentUserIds = await getUsersByGoogleId(newCommentUserGoogleIds);
-
-      //write new comment
-      const writeNewCommentArgs = {
-        videoId: videoId,
-        userIds: newCommentUserIds,
-        comments: newComments
-      }
-      const newCommentIds = await writeNew(writeNewCommentArgs, 'comment').then( (newIds) => {
-        return newIds;
-      });
-
-      //get the new comment content
-      const newlyAddedComments = await getNewAddedComments(newCommentIds);
-      const newlyAddedCommentsLikes = await checkNewCommentsForLikes(newCommentIds);
-
-      output.new_comments = newlyAddedComments;
-      output.new_likes = newlyAddedCommentsLikes;
-
+//setup handlers for Max.
+const handlers = {
+  query: (toggle) => {
+    if (toggle == 1) {
+      loopArgs.isRunning = true;
+      loopArgs.waitInterval = 100;
+      mainLoop();
+    } else if (toggle == 0) {
+      loopArgs.isRunning = false;
     } else {
-      output.new_comments = [];
-      // console.log("THERE ARE NO NEW COMMENTS AT THIS TIME");
+      console.log("Please enter either a 0 or 1.");
     }
+  }, 
 
-    //always compare like counts
-    const resultsGoogleIds = results.map( (result) => result.id );
-    const commentsFromGoogleQuery = await getCommentsByGoogleId(resultsGoogleIds);
-    const commentsWithMoreLikes = calculateLikeChanges(commentsFromGoogleQuery, results);
+  //nothing else for now...
+}
+Max.addHandlers(handlers);
 
-    //If any new comments have likes:
-    if (output.new_likes) {
-      commentsWithMoreLikes.forEach( (comment) => {
-        output.new_likes.push(comment);
-      });
-    } else { //If there are no new comments with likes.
-      output.new_likes = commentsWithMoreLikes;
-    }
+// =========================================================
+// ========================== Main =========================
+// =========================================================
 
-    //write any new likes to the db. return the ids for kicks and giggles i guess...
-    if (commentsWithMoreLikes.length > 0) {
-      const updatedLikeCommentIds = await updateCommentLikeCount(commentsWithMoreLikes).then( (newIds) => {
-        return newIds;
-      });
-    }
+/**
+ * mainLoop makes sure things are set and calls the process function
+ */
+function mainLoop() {
+  if(loopArgs.isRunning) {
 
-    return output
+    setTimeout(() => {
 
-  } catch (error) {
-    console.log(error);
+      //if everything is set, run it!
+      if(IDs.youtubeId != null && IDs.videoId != null) {
+        processLiveChat();
+      } else {
+        //It's possible that we're waiting on some async. Give it a second to return.
+        try {
+          setTimeout(() => processLiveChat(), 1000);
+        } catch(e) {
+          console.log("Looks like an ID is not set...");
+        }
+      }
+
+    }, loopArgs.waitInterval);
   }
 
+}
+
+/**
+ * processLiveChat() - runs the main processing functions. Calls the main loop upon success
+ */
+async function processLiveChat() {
+  const output = {};
+  const chatQuery = new google.ChatQuery(IDs.liveChatId);
+  const videoId = IDs.videoId;
+  const messageData = await chatQuery.getLiveChatData();
+
+  const newMessages = await checkResultsForNewMessages(messageData.messageData, videoId);
+
+  const newUsersGoogleIds = await checkNewMessagesForNewUsers(newMessages);
+
+  //write any new users to the db. return the ids for kicks and giggles i guess...
+  if (newUsersGoogleIds.length > 0) {
+    const newUserIds = await writeNew(newMessages, 'user').then( (newIds) => {
+      return newIds;
+    });
+  }
+
+  //get new message user google_ids into an array so we can search for them
+  const newMessageUserGoogleIds = newMessages.map( (message) => message.author.authorId);
+
+  //get google ids and user ids
+  const newMessageUserIds = await getUsersByGoogleId(newMessageUserGoogleIds);
+
+  //write new message
+  const writeNewMessageArgs = {
+    videoId: videoId,
+    userIds: newMessageUserIds,
+    messages: newMessages
+  }
+  const newMessageIds = await writeNew(writeNewMessageArgs, 'message').then( (newIds) => {
+    return newIds;
+  });
+
+  //get the new message content
+  const newlyAddedMessages = await getNewAddedMessages(newMessageIds);
+
+  //output to Max
+  output.new_messages = newlyAddedMessages
+  const outputString = JSON.stringify(output); //There seems to be a bug (or a feature) where you can't output directly an object.
+  Max.outlet(outputString);
+
+  //order for next round
+  loopArgs.waitInterval = messageData.nextPoll;
+  mainLoop();
 }
 
 // =========================================================
@@ -101,99 +136,99 @@ async function getThoseComments() {
 // =========================================================
 
 /**
- * checkResultsForNewComments
+ * parseVideoId() - takes a url and strips out the google video id
  *
- * @param  {object} results the google comments
- * @param  {int}    videoId
- * @return {array}          array of new comments || empty if nothing new
+ * @param {string} url must be a youtube url
+ * @returns {string} the google id
  */
-async function checkResultsForNewComments(results, videoId) {
-  const db = new dbQuery.DBQuery;
-  const allComments = await db.getCommentsForVideo(videoId);
-  return sniffNew(allComments, results, 'comment');
+function parseVideoId(url) {
+  const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2].length == 11) {
+    return match[2];
+  } else {
+    console.log("Cannot parse YouTube id.")
+  }
 }
 
 /**
- * checkNewCommentsForNewUsers
+ * getStreamDetails() - querys google to get liveChatId
  *
- * @param  {array} newComments array of new comments
- * @return {array}             google ids of new comments || empty if nothing new
+ * @param {string} youtubeId
+ * @returns {promise string}  
  */
-async function checkNewCommentsForNewUsers(newComments) {
+function getStreamDetails(youtubeId) {
+  return new Promise((resolve, reject) => {
+  try {
+    let streamDetails = new google.StreamDetails(youtubeId);
+    let chatId = streamDetails.getChatId();
+      resolve(chatId); 
+    } catch(e) {
+      reject(e);
+    }
+  });
+}
+
+/**
+ * getVideoId - querys the db and returns the video_id 
+ *
+ * @param {string} youtubeId
+ * @returns {int} video_id
+ */
+async function getVideoId(youtubeId) {
+  const db = new dbQuery.DBQuery;
+  return await db.checkVideo(youtubeId);
+}
+
+/**
+ * checkResultsForNewMessages
+ *
+ * @param  {object} results the google messages
+ * @param  {int}    videoId
+ * @return {array}          array of new messages || empty if nothing new
+ */
+async function checkResultsForNewMessages(results, videoId) {
+  const db = new dbQuery.DBQuery;
+  const allMessages = await db.getMessagesForVideo(videoId);
+  return sniffNew(allMessages, results, 'chat');
+}
+
+/**
+ * checkNewMessagesForNewUsers
+ *
+ * @param  {array} newMessages array of new messages
+ * @return {array}             google ids of new messages || empty if nothing new
+ */
+async function checkNewMessagesForNewUsers(newMessages) {
   const db = new dbQuery.DBQuery;
   const allUsers = await db.getAllUsers();
-  const newUsers = sniffNew(allUsers, newComments, 'user');
+  const newUsers = sniffNew(allUsers, newMessages, 'user');
   const newUsersGoogleIds = newUsers.map( (user) => {
-    return user.snippet.authorChannelId.value;
+    return user.author.authorId;
   });
   return newUsersGoogleIds;
 }
 
 /**
- * checkNewCommentsForLikes - check new comments for likes
- *
- * @param  {array} newCommentIds the comment ids of new comments
- * @return {array}               all the new likes formatted to output to Max
- */
-async function checkNewCommentsForLikes(newCommentIds) {
-  const db = new dbQuery.DBQuery;
-  const likes = await db.getLikesById(newCommentIds);
-
-  likes.forEach( (comment) => {
-    comment.like_inc = comment.like_count;
-  });
-
-  return likes;
-}
-
-/**
  * getUsersByGoogleId
  *
- * @param  {array} newCommentUserGoogleIds array of google ids
+ * @param  {array} newMessageUserGoogleIds array of google ids
  * @return {array}                         result of user_ids and google_ids
  */
-async function getUsersByGoogleId(newCommentUserGoogleIds) {
+async function getUsersByGoogleId(newMessageUserGoogleIds) {
   const db = new dbQuery.DBQuery;
-  return await db.getUsersByGoogleId(newCommentUserGoogleIds);
+  return await db.getUsersByGoogleId(newMessageUserGoogleIds);
 }
 
 /**
- * getCommentsByGoogleId
+ * getNewAddedMessages
  *
- * @param  {array} commentGoogleIds array of google ids
- * @return {array}                  full result of comments
- */
-async function getCommentsByGoogleId(commentGoogleIds) {
-  const db = new dbQuery.DBQuery;
-  return await db.getCommentsByGoogleId(commentGoogleIds);
-}
-
-/**
- * getNewAddedComments
- *
- * @param  {array} newCommentIds array of comment ids
+ * @param  {array} newMessageIds array of comment ids
  * @return {array}               result of comment_id and content
  */
-async function getNewAddedComments(newCommentIds) {
+async function getNewAddedMessages(newMessageIds) {
   const db = new dbQuery.DBQuery;
-  return await db.getCommentsById(newCommentIds);
-}
-
-/**
- * updateCommentLikeCount
- *
- * @param  {object} comment the like_count object
- * @return {type}           comment_id of update
- */
-async function updateCommentLikeCount(comments) {
-  const db = new dbQuery.DBQuery;
-
-  let commentIds = comments.map( async (comment) => {
-    let commentId = await db.updateLikeCount(comment);
-    return commentId;
-  });
-
-  return Promise.all(commentIds)
+  return await db.getMessagesById(newMessageIds);
 }
 
 // =========================================================
@@ -203,33 +238,34 @@ async function updateCommentLikeCount(comments) {
 /**
  * writeNewUsers - writes new users to db. returns an array of new ids
  *
- * @param  {any} newItemToSave the something you want to save
+ * @param  {any} newItemsToSave the something you want to save
  * @return {array}                an array of new ids
  */
-function writeNew(newItemToSave, type) {
+function writeNew(newItemsToSave, type) {
   const db = new dbQuery.DBQuery;
   let newIds;
     switch(type) {
 
       case "user":
-        newIds = newItemToSave.map( async (user) => {
-          let userId = await db.newUser(user);
+        newIds = newItemsToSave.map( async (item) => {
+          let googleId = item.author.authorId;
+          let userId = await db.newUser(googleId);
           return userId;
         });
       break;
 
-      case "comment":
-        newIds = newItemToSave.comments.map( async (comment) => {
-          //match the user_id with the google user id for comment
+      case "message":
+        newIds = newItemsToSave.messages.map( async (message) => {
+          //match the user_id with the google user id for message
           let user_id;
-          newItemToSave.userIds.forEach( (user) => {
-            if(user.google_id == comment.snippet.authorChannelId.value) {
+          newItemsToSave.userIds.forEach( (user) => {
+            if(user.google_id == message.author.authorId) {
               user_id = user.user_id;
             }
           });
-          //write the comment to the db
-          let commentId = await db.newComment(comment, newItemToSave.videoId, user_id);
-          return commentId;
+          //write the message to the db
+          let messageId = await db.newMessage(message.message, newItemsToSave.videoId, user_id);
+          return messageId;
         });
       break
     }
@@ -240,8 +276,8 @@ function writeNew(newItemToSave, type) {
 /**
  * sniffNew - loop through stuff and find new stuff
  *
- * @param  {array}  allComments all comments known to exist
- * @param  {array}  results     the comments returned by google
+ * @param  {array}  allKnown all things known to exist
+ * @param  {array}  results     the things returned by google
  * @param  {string} type
  * @return {object}             object containg an array of known ids and new ids
  */
@@ -254,12 +290,12 @@ function sniffNew(allKnown, results, type) {
 
     //determine the google_id based on type
     switch(type) {
-      case 'comment':
-        potentialNewItemId = potentialNewItem.id;
+      case 'chat':
+        potentialNewItemId = potentialNewItem.message.id;
       break;
 
       case 'user':
-        potentialNewItemId = potentialNewItem.snippet.authorChannelId.value;
+        potentialNewItemId = potentialNewItem.author.authorId;
       break;
     }
 
@@ -270,39 +306,11 @@ function sniffNew(allKnown, results, type) {
         break;
       }
     }
-
+    //if we don't know the item
     if (!knownItem) {
       newItems.push(potentialNewItem)
     }
   });
 
   return newItems
-}
-
-/**
- * calculateLikeChanges - loop through stuff and finds changes in like counts
- *
- * @param  {array} comments the sqlite results of all comments
- * @param  {array} results  the google results
- * @return {object}           return object of id, current count, and inc amount
- */
-function calculateLikeChanges(comments, results) {
-  const likeChanges = [];
-
-  comments.forEach( (comment) => {
-    results.forEach( (result) => {
-
-      //if the ids match but the like counts don't match
-      if(result.id == comment.google_id && result.snippet.likeCount != comment.like_count) {
-        let updatedLikes = {
-          comment_id: comment.comment_id,
-          like_count: result.snippet.likeCount,
-          like_inc: result.snippet.likeCount - comment.like_count
-        }
-        likeChanges.push(updatedLikes);
-      }
-
-    });
-  });
-  return likeChanges;
 }

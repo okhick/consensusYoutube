@@ -91,6 +91,7 @@ class ChatQuery {
             },
             author: {
               authorId: chatObject.authorDetails.channelId,
+              display: chatObject.authorDetails.displayName,
               moderator: chatObject.authorDetails.isChatModerator
             }
           };

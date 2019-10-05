@@ -7,21 +7,14 @@ const fs = require('fs');
 // ========================= Setup =========================
 // =========================================================
 
-<<<<<<< HEAD
-async function getThoseComments() {
-  //these two lines read the google api
-  let commentQuery = new google.CommentQuery('UCEjbSDzSpc3ft1d5APMLxsQ');
-  let results = await commentQuery.getComments();
-=======
-//https://www.youtube.com/watch?v=hHW1oY26kxQ - For testing.
- 
 const IDs = {
   youtubeId: parseVideoId(process.argv[2]),
+  // youtubeId: parseVideoId('https://youtu.be/hHW1oY26kxQ')
 }
 >>>>>>> 761fd589872e140909b95fbc68584f4fcd4937a9
 
 const loopArgs = {
-  waitInterval: 1000,
+  waitInterval: parseInt(process.argv[3]),
   isRunning: true
 }
 
@@ -40,7 +33,6 @@ const handlers = {
   query: (toggle) => {
     if (toggle == 1) {
       loopArgs.isRunning = true;
-      loopArgs.waitInterval = 100;
       mainLoop();
     } else if (toggle == 0) {
       loopArgs.isRunning = false;
@@ -56,7 +48,6 @@ Max.addHandlers(handlers);
 // =========================================================
 // ========================== Main =========================
 // =========================================================
-
 /**
  * mainLoop makes sure things are set and calls the process function
  */
@@ -123,11 +114,12 @@ async function processLiveChat() {
 
   //output to Max
   output.new_messages = newlyAddedMessages
+  // console.log(output);
   const outputString = JSON.stringify(output); //There seems to be a bug (or a feature) where you can't output directly an object.
   Max.outlet(outputString);
 
   //order for next round
-  loopArgs.waitInterval = messageData.nextPoll;
+  //loopArgs.waitInterval = messageData.nextPoll;
   mainLoop();
 }
 
@@ -249,7 +241,9 @@ function writeNew(newItemsToSave, type) {
       case "user":
         newIds = newItemsToSave.map( async (item) => {
           let googleId = item.author.authorId;
-          let userId = await db.newUser(googleId);
+          let moderator = item.author.moderator;
+          let display = item.author.display;
+          let userId = await db.newUser(googleId, display, moderator);
           return userId;
         });
       break;

@@ -51,11 +51,11 @@ class DBQuery {
    * @param  {string} user google_id of user
    * @return {int}         id of new record
    */
-  async newUser(user, moderator) {
-    let insert = `INSERT INTO users (google_id, moderator, date_added) VALUES ($google_id, $moderator, $now )`;
+  async newUser(user, display, moderator) {
+    let insert = `INSERT INTO users (google_id, display, moderator, date_added) VALUES ($google_id, $display, $moderator, $now )`;
 
     return new Promise( (resolve, reject) => {
-      db.run(insert, { $google_id:user, $moderator:moderator, $now:this.now }, function(err) {
+      db.run(insert, { $google_id:user, $display:display, $moderator:moderator, $now:this.now }, function(err) {
         if (err) {
           reject(err);
         } else {
@@ -150,7 +150,7 @@ class DBQuery {
    * @return {array}             returns message id and content
    */
   async getMessagesById(message_ids) {
-    let select = `SELECT message_id, content, messages.user_id, users.moderator FROM messages 
+    let select = `SELECT message_id, content, users.display as name, users.moderator FROM messages 
       JOIN users on users.user_id = messages.user_id  
       WHERE message_id in`;
 

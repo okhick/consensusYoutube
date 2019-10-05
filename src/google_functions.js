@@ -35,6 +35,7 @@ class StreamDetails {
   async getChatId() {
     try {
       let streamingData = await this._getLiveStreamingDetails();
+      console.log(streamingData);
       let chatId = streamingData.data.items[0].liveStreamingDetails.activeLiveChatId;
       return new Promise((resolve) => {
         resolve(chatId);

@@ -1,4 +1,4 @@
-const Max = require('max-api');
+// const Max = require('max-api');
 const google = require("./src/google_functions");
 const dbQuery = require("./src/db_functions")
 const fs = require('fs');
@@ -7,10 +7,10 @@ const fs = require('fs');
 // ========================= Setup =========================
 // =========================================================
 
-//https://www.youtube.com/watch?v=hHW1oY26kxQ - For testing.
- 
+//https://www.youtube.com/watch?v=hHW1oY26kxQ - For testing 
 const IDs = {
-  youtubeId: parseVideoId(process.argv[2]),
+  // youtubeId: parseVideoId(process.argv[2]),
+  youtubeId: parseVideoId('https://youtu.be/hHW1oY26kxQ')
 }
 
 const loopArgs = {
@@ -44,12 +44,11 @@ const handlers = {
 
   //nothing else for now...
 }
-Max.addHandlers(handlers);
+// Max.addHandlers(handlers);
 
 // =========================================================
 // ========================== Main =========================
 // =========================================================
-
 /**
  * mainLoop makes sure things are set and calls the process function
  */
@@ -116,12 +115,13 @@ async function processLiveChat() {
 
   //output to Max
   output.new_messages = newlyAddedMessages
+  console.log(output);
   const outputString = JSON.stringify(output); //There seems to be a bug (or a feature) where you can't output directly an object.
-  Max.outlet(outputString);
+  // Max.outlet(outputString);
 
   //order for next round
-  loopArgs.waitInterval = messageData.nextPoll;
-  mainLoop();
+  //loopArgs.waitInterval = messageData.nextPoll;
+  //mainLoop();
 }
 
 // =========================================================
@@ -242,7 +242,8 @@ function writeNew(newItemsToSave, type) {
       case "user":
         newIds = newItemsToSave.map( async (item) => {
           let googleId = item.author.authorId;
-          let userId = await db.newUser(googleId);
+          let moderator = item.author.moderator;
+          let userId = await db.newUser(googleId, moderator);
           return userId;
         });
       break;

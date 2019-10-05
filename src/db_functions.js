@@ -1,6 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const dateFormat = require('date-format');
-const db = new sqlite3.Database('./youtubedata.db', (err) => {
+const db = new sqlite3.Database('./youtubeData.db', (err) => {
   if (err) { console.log(err) }
 });
 
@@ -51,11 +51,11 @@ class DBQuery {
    * @param  {string} user google_id of user
    * @return {int}         id of new record
    */
-  async newUser(user) {
-    let insert = `INSERT INTO users (google_id, date_added) VALUES ($google_id, $now )`;
+  async newUser(user, moderator) {
+    let insert = `INSERT INTO users (google_id, moderator, date_added) VALUES ($google_id, $moderator, $now )`;
 
     return new Promise( (resolve, reject) => {
-      db.run(insert, { $google_id:user, $now:this.now }, function(err) {
+      db.run(insert, { $google_id:user, $moderator:moderator, $now:this.now }, function(err) {
         if (err) {
           reject(err);
         } else {
@@ -150,7 +150,9 @@ class DBQuery {
    * @return {array}             returns message id and content
    */
   async getMessagesById(message_ids) {
-    let select = "SELECT message_id, content FROM messages WHERE message_id in";
+    let select = `SELECT message_id, content, messages.user_id, users.moderator FROM messages 
+      JOIN users on users.user_id = messages.user_id  
+      WHERE message_id in`;
 
     return new Promise( (resolve, reject) => {
       db.all(`${select} (${message_ids.map( _ => '?')})`, message_ids, (err, row) => {

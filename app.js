@@ -11,7 +11,6 @@ const IDs = {
   youtubeId: parseVideoId(process.argv[2]),
   // youtubeId: parseVideoId('https://youtu.be/hHW1oY26kxQ')
 }
->>>>>>> 761fd589872e140909b95fbc68584f4fcd4937a9
 
 const loopArgs = {
   waitInterval: parseInt(process.argv[3]),

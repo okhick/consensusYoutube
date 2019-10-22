@@ -45,12 +45,39 @@ const handlers = {
 Max.addHandlers(handlers);
 
 // =========================================================
+// ========================== Logs =========================
+// =========================================================
+
+let startTime, endTime;
+
+function log_StartTimer() {
+  startTime = new Date();
+};
+
+function log_EndTimer() {
+  endTime = new Date();
+  let timeDiff = endTime - startTime; //in ms
+  // strip the ms
+  timeDiff /= 1000;
+  let log = `It's been ${timeDiff} since last query.\n`;
+  //Log it
+  fs.appendFile('query.log', log, function (err) {
+    if (err) throw err;
+  });
+}
+
+// =========================================================
 // ========================== Main =========================
 // =========================================================
 /**
  * mainLoop makes sure things are set and calls the process function
  */
 function mainLoop() {
+
+  //stuff for logs
+  log_EndTimer();
+  log_StartTimer();
+
   if(loopArgs.isRunning) {
 
     setTimeout(() => {
@@ -117,8 +144,7 @@ async function processLiveChat() {
   const outputString = JSON.stringify(output); //There seems to be a bug (or a feature) where you can't output directly an object.
   Max.outlet(outputString);
 
-  //order for next round
-  //loopArgs.waitInterval = messageData.nextPoll;
+  //order the next round
   mainLoop();
 }
 
